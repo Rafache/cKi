@@ -38,7 +38,7 @@ The existing `cki` project uses Direct Upload. Dashboard drag-and-drop deploymen
 
 Wrangler deploys the static bundle and compiles `functions/api/abraxio/members.ts` as `GET /api/abraxio/members`. `public/_routes.json` limits Function invocations to `/api/*`, so static assets remain static. The `functions` directory must remain at the repository root. No Abraxio token is configured at build time.
 
-The GitHub repository must provide `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as Actions secrets and `CLOUDFLARE_PROJECT_NAME` as an Actions variable. Their values must never appear in the repository or logs. Because Cloudflare does not allow an existing Direct Upload project to be converted to Git integration, Wrangler in GitHub Actions provides continuous deployment without recreating the Pages project.
+The GitHub repository must provide `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as Actions secrets. Their values must never appear in the repository or logs. The non-secret Pages project name, `cki`, is declared in the workflow. Because Cloudflare does not allow an existing Direct Upload project to be converted to Git integration, Wrangler in GitHub Actions provides continuous deployment without recreating the Pages project.
 
 After deployment, verify the restricted route without using a real token:
 
