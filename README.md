@@ -54,7 +54,7 @@ Le site est disponible sur <http://localhost:8080>. Voir [DEPLOYMENT.md](DEPLOYM
 
 Le dépôt inclut une Pages Function pour fournir le proxy Abraxio sur le même domaine que le site. Voir [DEPLOYMENT.md](DEPLOYMENT.md) pour les réglages de build et les contrôles après déploiement.
 
-Le projet Pages existant utilise Direct Upload. Le déploiement doit donc passer par `npm run deploy:pages` afin que Wrangler compile et publie également la Function.
+Le projet Pages existant utilise Direct Upload. Comme KesKiFon, la CI GitHub déploie donc avec Wrangler afin de compiler et publier également la Function.
 
 ## Sécurité et confidentialité
 

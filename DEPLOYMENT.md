@@ -29,15 +29,16 @@ The site is then available at <http://localhost:8080>.
 
 ## Cloudflare Pages
 
-The existing `cki` project uses Direct Upload. Dashboard drag-and-drop deployments contain only static assets and do not compile Pages Functions. Deploy it from the repository root with Wrangler so the root `functions` directory is included:
+The existing `cki` project uses Direct Upload. Dashboard drag-and-drop deployments contain only static assets and do not compile Pages Functions. The canonical deployment path is the `Deploy` job in `.github/workflows/ci.yml`, matching KesKiFon:
 
-```bash
-npm run deploy:pages
-```
+1. the `Quality` job builds and validates `dist` and the Pages Function;
+2. the `Tests` job runs the deterministic test suite;
+3. after both succeed, the `Deploy` job downloads the build artifact and runs Wrangler from the repository root;
+4. pushes to `main` deploy production, while eligible same-repository pull requests deploy a branch preview.
 
-The predeploy script runs the complete quality suite and rebuilds `dist`. Wrangler then deploys the static bundle and compiles `functions/api/abraxio/members.ts` as `GET /api/abraxio/members`. The `functions` directory must remain at the repository root. No Abraxio token is configured at build time.
+Wrangler deploys the static bundle and compiles `functions/api/abraxio/members.ts` as `GET /api/abraxio/members`. `public/_routes.json` limits Function invocations to `/api/*`, so static assets remain static. The `functions` directory must remain at the repository root. No Abraxio token is configured at build time.
 
-Authenticate the local Wrangler installation with `npx wrangler login` when requested. Because Cloudflare does not allow an existing Direct Upload project to be converted to Git integration, future automatic deployments require either a new Git-integrated Pages project or a scoped Cloudflare API token configured in GitHub Actions.
+The GitHub repository must provide `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as Actions secrets and `CLOUDFLARE_PROJECT_NAME` as an Actions variable. Their values must never appear in the repository or logs. Because Cloudflare does not allow an existing Direct Upload project to be converted to Git integration, Wrangler in GitHub Actions provides continuous deployment without recreating the Pages project.
 
 After deployment, verify the restricted route without using a real token:
 
