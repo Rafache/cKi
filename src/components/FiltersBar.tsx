@@ -88,7 +88,7 @@ function MultiSelectFilter({
                       checked ? values.filter((value) => value !== option) : [...values, option],
                     )
                   }
-                  className="h-4 w-4 accent-brand"
+                  className="h-4 w-4 shrink-0 accent-brand"
                 />
                 {formatOption(option)}
               </label>

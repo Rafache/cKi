@@ -36,9 +36,16 @@ select:disabled {
 .filter-field > span {
   @apply text-[10px] font-black uppercase tracking-wider text-slate-400;
 }
-.filter-field input,
+.filter-field input:not([type='checkbox']),
 .filter-field select {
   @apply h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent focus:ring-3 focus:ring-accent/15;
+}
+.filter-field input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
 }
 .resource-table {
   @apply min-w-[1700px] w-full border-collapse text-left text-xs;
