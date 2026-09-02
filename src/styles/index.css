@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: #0f1ea0;
+  --color-brand-dark: #09136f;
+  --color-accent: #00d18b;
+  --color-bg: #f2f2fc;
+  --font-sans: 'Source Sans 3', 'Source Sans Pro', ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: var(--font-sans);
+}
+button,
+select {
+  cursor: pointer;
+}
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+.header-button {
+  @apply inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 text-xs font-black text-white transition hover:bg-white/20 disabled:opacity-50;
+}
+.metric-card {
+  @apply flex min-h-24 items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm;
+}
+.filter-field {
+  @apply flex min-w-0 flex-col gap-1;
+}
+.filter-field > span {
+  @apply text-[10px] font-black uppercase tracking-wider text-slate-400;
+}
+.filter-field input,
+.filter-field select {
+  @apply h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent focus:ring-3 focus:ring-accent/15;
+}
+.resource-table {
+  @apply min-w-[1700px] w-full border-collapse text-left text-xs;
+}
+.resource-table thead {
+  @apply sticky top-0 z-20 bg-slate-900 text-white;
+}
+.resource-table th {
+  @apply whitespace-nowrap border-b border-slate-800 px-3 py-2;
+}
+.resource-table td {
+  @apply border-b border-slate-100 px-3 py-2 text-slate-600;
+}
+.resource-table tbody tr {
+  @apply transition hover:bg-slate-50;
+}
+.resource-table tfoot {
+  @apply sticky bottom-0 z-20;
+}
+.resource-table tfoot th,
+.resource-table tfoot td {
+  @apply border-t-2 border-slate-800 bg-slate-100 px-3 py-2 font-black text-slate-800;
+}
+.table-sort {
+  @apply flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-200;
+}
+.pagination-button {
+  @apply grid h-8 w-8 place-items-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30;
+}
+.drawer-title {
+  @apply mb-4 flex items-center gap-2 border-b border-slate-100 pb-2 text-sm font-black uppercase tracking-wider text-slate-800;
+}
+.drawer-title svg {
+  @apply h-4 w-4 text-brand;
+}
+.detail-grid {
+  @apply grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3;
+}
+.schedule-table {
+  @apply min-w-full text-right text-xs;
+}
+.schedule-table th {
+  @apply whitespace-nowrap bg-slate-900 px-2 py-2 font-bold text-white;
+}
+.schedule-table td {
+  @apply whitespace-nowrap border-b border-slate-100 px-2 py-2 text-slate-600;
+}
+.schedule-table tfoot th {
+  @apply whitespace-nowrap border-t-2 border-slate-800 bg-slate-100 px-2 py-2 font-black text-slate-800;
+}
+*:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+  outline-offset: 2px;
+}
