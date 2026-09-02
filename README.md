@@ -54,6 +54,8 @@ Le site est disponible sur <http://localhost:8080>. Voir [DEPLOYMENT.md](DEPLOYM
 
 Le dépôt inclut une Pages Function pour fournir le proxy Abraxio sur le même domaine que le site. Voir [DEPLOYMENT.md](DEPLOYMENT.md) pour les réglages de build et les contrôles après déploiement.
 
+Le projet Pages existant utilise Direct Upload. Le déploiement doit donc passer par `npm run deploy:pages` afin que Wrangler compile et publie également la Function.
+
 ## Sécurité et confidentialité
 
 Chaque utilisateur saisit son propre token Abraxio. Il est envoyé exclusivement dans l’en-tête `Authorization` et conservé dans le `localStorage` jusqu’à la déconnexion.

@@ -29,18 +29,15 @@ The site is then available at <http://localhost:8080>.
 
 ## Cloudflare Pages
 
-Connect the GitHub repository to a Cloudflare Pages project with these build settings:
+The existing `cki` project uses Direct Upload. Dashboard drag-and-drop deployments contain only static assets and do not compile Pages Functions. Deploy it from the repository root with Wrangler so the root `functions` directory is included:
 
-```text
-Build command: npm run build
-Build output directory: dist
-Root directory: repository root (leave empty)
-Node.js version: 24
+```bash
+npm run deploy:pages
 ```
 
-The `functions` directory must remain at the repository root; do not configure `dist` as the project root. Cloudflare deploys `functions/api/abraxio/members.ts` as `GET /api/abraxio/members` alongside the static Vite bundle. No Abraxio token or Cloudflare application secret is configured at build time.
+The predeploy script runs the complete quality suite and rebuilds `dist`. Wrangler then deploys the static bundle and compiles `functions/api/abraxio/members.ts` as `GET /api/abraxio/members`. The `functions` directory must remain at the repository root. No Abraxio token is configured at build time.
 
-Deploy through the GitHub integration or Wrangler. A dashboard drag-and-drop/direct upload contains only static assets and does not deploy Pages Functions.
+Authenticate the local Wrangler installation with `npx wrangler login` when requested. Because Cloudflare does not allow an existing Direct Upload project to be converted to Git integration, future automatic deployments require either a new Git-integrated Pages project or a scoped Cloudflare API token configured in GitHub Actions.
 
 After deployment, verify the restricted route without using a real token:
 
