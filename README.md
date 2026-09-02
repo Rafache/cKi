@@ -15,9 +15,9 @@ Annuaire interne des ressources de la DTDD, alimenté par l’API Abraxio.
 
 ## Architecture
 
-Le client utilise React 19, TypeScript, Vite, Tailwind CSS et Zustand. La production utilise une image Docker multi-stage et Nginx.
+Le client utilise React 19, TypeScript, Vite, Tailwind CSS et Zustand. La production peut utiliser une image Docker multi-stage avec Nginx ou Cloudflare Pages avec une Pages Function.
 
-Le navigateur appelle uniquement `GET /api/abraxio/members`. Nginx transmet cette route à l’API Abraxio et refuse les autres routes ou méthodes sous `/api/`.
+Le navigateur appelle uniquement `GET /api/abraxio/members`. Nginx ou la Pages Function transmet cette route à l’API Abraxio et refuse les autres méthodes sans exposer le token.
 
 ## Développement
 
@@ -49,6 +49,10 @@ docker compose up --build
 ```
 
 Le site est disponible sur <http://localhost:8080>. Voir [DEPLOYMENT.md](DEPLOYMENT.md) pour l’image GHCR et les contraintes de production.
+
+## Cloudflare Pages
+
+Le dépôt inclut une Pages Function pour fournir le proxy Abraxio sur le même domaine que le site. Voir [DEPLOYMENT.md](DEPLOYMENT.md) pour les réglages de build et les contrôles après déploiement.
 
 ## Sécurité et confidentialité
 
