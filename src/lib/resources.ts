@@ -138,17 +138,48 @@ export function getGroupLabel(resource: DtddResource, groupBy: Exclude<GroupByKe
   }
 }
 
-export function groupResources(resources: DtddResource[], groupBy: Exclude<GroupByKey, ''>) {
+export interface GroupedResourceSummary {
+  label: string;
+  people: number;
+  assignedDays: number;
+  totalCost: number;
+}
+
+export type GroupSortKey = keyof GroupedResourceSummary;
+
+export function groupResources(
+  resources: DtddResource[],
+  groupBy: Exclude<GroupByKey, ''>,
+): GroupedResourceSummary[] {
   const groups = new Map<string, DtddResource[]>();
   for (const resource of resources) {
     const label = getGroupLabel(resource, groupBy);
     groups.set(label, [...(groups.get(label) ?? []), resource]);
   }
   return [...groups.entries()]
-    .map(([label, items]) => ({
-      label,
-      people: items.length,
-      totalCost: summarizeResources(items).totalCost,
-    }))
+    .map(([label, items]) => {
+      const totals = summarizeResources(items);
+      return {
+        label,
+        people: items.length,
+        assignedDays: totals.assignedDays,
+        totalCost: totals.totalCost,
+      };
+    })
     .sort((a, b) => b.totalCost - a.totalCost || a.label.localeCompare(b.label, 'fr'));
+}
+
+export function sortGroupedResources(
+  groups: GroupedResourceSummary[],
+  key: GroupSortKey,
+  direction: SortDirection,
+): GroupedResourceSummary[] {
+  const multiplier = direction === 'asc' ? 1 : -1;
+  return [...groups].sort((a, b) => {
+    const difference =
+      key === 'label'
+        ? a.label.localeCompare(b.label, 'fr', { numeric: true, sensitivity: 'base' })
+        : a[key] - b[key];
+    return difference * multiplier || a.label.localeCompare(b.label, 'fr');
+  });
 }

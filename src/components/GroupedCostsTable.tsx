@@ -1,6 +1,8 @@
-import { Layers3 } from 'lucide-react';
-import { groupResources, summarizeResources } from '../lib/resources';
-import type { DtddResource, GroupByKey } from '../types';
+import { useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Layers3 } from 'lucide-react';
+import { groupResources, sortGroupedResources, summarizeResources } from '../lib/resources';
+import type { GroupSortKey } from '../lib/resources';
+import type { DtddResource, GroupByKey, SortDirection } from '../types';
 
 const currency = (value: number) =>
   new Intl.NumberFormat('fr-FR', {
@@ -8,6 +10,9 @@ const currency = (value: number) =>
     currency: 'EUR',
     maximumFractionDigits: 0,
   }).format(value);
+
+const number = (value: number) =>
+  new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value);
 
 const groupLabels: Record<Exclude<GroupByKey, ''>, string> = {
   classification: 'type',
@@ -17,6 +22,40 @@ const groupLabels: Record<Exclude<GroupByKey, ''>, string> = {
   supplier: 'fournisseur',
 };
 
+function SortHeader({
+  label,
+  column,
+  sortKey,
+  direction,
+  align = 'right',
+  onSort,
+}: {
+  label: string;
+  column: GroupSortKey;
+  sortKey: GroupSortKey;
+  direction: SortDirection;
+  align?: 'left' | 'right';
+  onSort: (key: GroupSortKey) => void;
+}) {
+  const active = column === sortKey;
+  const Icon = active ? (direction === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className={`table-sort w-full ${align === 'right' ? 'justify-end' : ''}`}
+      >
+        {label}
+        <Icon className={`h-3.5 w-3.5 ${active ? 'text-accent' : 'text-slate-500'}`} />
+      </button>
+    </th>
+  );
+}
+
 export function GroupedCostsTable({
   resources,
   groupBy,
@@ -24,8 +63,20 @@ export function GroupedCostsTable({
   resources: DtddResource[];
   groupBy: Exclude<GroupByKey, ''>;
 }) {
-  const groups = groupResources(resources, groupBy);
+  const [sortKey, setSortKey] = useState<GroupSortKey>('totalCost');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const groups = useMemo(
+    () => sortGroupedResources(groupResources(resources, groupBy), sortKey, sortDirection),
+    [resources, groupBy, sortKey, sortDirection],
+  );
   const totals = summarizeResources(resources);
+  const changeSort = (key: GroupSortKey) => {
+    if (key === sortKey) setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
@@ -43,9 +94,35 @@ export function GroupedCostsTable({
           <table className="schedule-table">
             <thead>
               <tr>
-                <th className="text-left">{groupLabels[groupBy]}</th>
-                <th>Nombre de personnes</th>
-                <th>Coût total HT</th>
+                <SortHeader
+                  label={groupLabels[groupBy]}
+                  column="label"
+                  sortKey={sortKey}
+                  direction={sortDirection}
+                  align="left"
+                  onSort={changeSort}
+                />
+                <SortHeader
+                  label="Nombre de personnes"
+                  column="people"
+                  sortKey={sortKey}
+                  direction={sortDirection}
+                  onSort={changeSort}
+                />
+                <SortHeader
+                  label="Nombre de jours"
+                  column="assignedDays"
+                  sortKey={sortKey}
+                  direction={sortDirection}
+                  onSort={changeSort}
+                />
+                <SortHeader
+                  label="Coût total HT"
+                  column="totalCost"
+                  sortKey={sortKey}
+                  direction={sortDirection}
+                  onSort={changeSort}
+                />
               </tr>
             </thead>
             <tbody>
@@ -53,6 +130,7 @@ export function GroupedCostsTable({
                 <tr key={group.label}>
                   <td className="text-left font-bold text-slate-800">{group.label}</td>
                   <td>{group.people}</td>
+                  <td>{number(group.assignedDays)}</td>
                   <td>{currency(group.totalCost)}</td>
                 </tr>
               ))}
@@ -61,6 +139,7 @@ export function GroupedCostsTable({
               <tr>
                 <th className="text-left">Total</th>
                 <th>{resources.length}</th>
+                <th>{number(totals.assignedDays)}</th>
                 <th>{currency(totals.totalCost)}</th>
               </tr>
             </tfoot>

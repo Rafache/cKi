@@ -5,6 +5,7 @@ import {
   EMPTY_FILTERS,
   filterResources,
   groupResources,
+  sortGroupedResources,
   sortResources,
   summarizeResources,
 } from './resources';
@@ -96,15 +97,51 @@ describe('summarizeResources', () => {
 });
 
 describe('groupResources', () => {
-  it('regroupe les personnes et additionne leurs coûts', () => {
+  it('regroupe les personnes et additionne leurs jours et leurs coûts', () => {
     const rows = [
-      { ...resources[0], classification: 'internal' as const, totalCost: 100 },
-      { ...resources[1], classification: 'external' as const, totalCost: 250 },
-      { ...resources[1], id: '3', classification: 'external' as const, totalCost: 300 },
+      {
+        ...resources[0],
+        classification: 'internal' as const,
+        assignedDays: 1.5,
+        totalCost: 100,
+      },
+      {
+        ...resources[1],
+        classification: 'external' as const,
+        assignedDays: 2,
+        totalCost: 250,
+      },
+      {
+        ...resources[1],
+        id: '3',
+        classification: 'external' as const,
+        assignedDays: 3.5,
+        totalCost: 300,
+      },
     ];
     expect(groupResources(rows, 'classification')).toEqual([
-      { label: 'Prestataire externe', people: 2, totalCost: 550 },
-      { label: 'Interne', people: 1, totalCost: 100 },
+      { label: 'Prestataire externe', people: 2, assignedDays: 5.5, totalCost: 550 },
+      { label: 'Interne', people: 1, assignedDays: 1.5, totalCost: 100 },
     ]);
+  });
+
+  it('trie les regroupements par libellé ou par valeur numérique', () => {
+    const groups = [
+      { label: 'Équipe 10', people: 1, assignedDays: 12, totalCost: 1200 },
+      { label: 'Équipe 2', people: 3, assignedDays: 8, totalCost: 2400 },
+      { label: 'Équipe 1', people: 2, assignedDays: 8, totalCost: 1600 },
+    ];
+
+    expect(sortGroupedResources(groups, 'label', 'asc').map((group) => group.label)).toEqual([
+      'Équipe 1',
+      'Équipe 2',
+      'Équipe 10',
+    ]);
+    expect(sortGroupedResources(groups, 'people', 'desc').map((group) => group.people)).toEqual([
+      3, 2, 1,
+    ]);
+    expect(sortGroupedResources(groups, 'assignedDays', 'asc').map((group) => group.label)).toEqual(
+      ['Équipe 1', 'Équipe 2', 'Équipe 10'],
+    );
   });
 });
