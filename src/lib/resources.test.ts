@@ -4,6 +4,7 @@ import { member } from '../test/fixtures';
 import {
   EMPTY_FILTERS,
   filterResources,
+  getFullTimeEquivalent,
   groupResources,
   sortGroupedResources,
   sortResources,
@@ -94,6 +95,11 @@ describe('summarizeResources', () => {
       totalCost: 30000,
     });
   });
+
+  it('calcule les ETP sur la base de 185 jours annuels', () => {
+    expect(getFullTimeEquivalent(185)).toBe(1);
+    expect(getFullTimeEquivalent(92.5)).toBe(0.5);
+  });
 });
 
 describe('groupResources', () => {
@@ -120,16 +126,46 @@ describe('groupResources', () => {
       },
     ];
     expect(groupResources(rows, 'classification')).toEqual([
-      { label: 'Prestataire externe', people: 2, assignedDays: 5.5, totalCost: 550 },
-      { label: 'Interne', people: 1, assignedDays: 1.5, totalCost: 100 },
+      {
+        label: 'Prestataire externe',
+        people: 2,
+        assignedDays: 5.5,
+        fullTimeEquivalent: 5.5 / 185,
+        totalCost: 550,
+      },
+      {
+        label: 'Interne',
+        people: 1,
+        assignedDays: 1.5,
+        fullTimeEquivalent: 1.5 / 185,
+        totalCost: 100,
+      },
     ]);
   });
 
   it('trie les regroupements par libellé ou par valeur numérique', () => {
     const groups = [
-      { label: 'Équipe 10', people: 1, assignedDays: 12, totalCost: 1200 },
-      { label: 'Équipe 2', people: 3, assignedDays: 8, totalCost: 2400 },
-      { label: 'Équipe 1', people: 2, assignedDays: 8, totalCost: 1600 },
+      {
+        label: 'Équipe 10',
+        people: 1,
+        assignedDays: 12,
+        fullTimeEquivalent: 12 / 185,
+        totalCost: 1200,
+      },
+      {
+        label: 'Équipe 2',
+        people: 3,
+        assignedDays: 8,
+        fullTimeEquivalent: 8 / 185,
+        totalCost: 2400,
+      },
+      {
+        label: 'Équipe 1',
+        people: 2,
+        assignedDays: 8,
+        fullTimeEquivalent: 8 / 185,
+        totalCost: 1600,
+      },
     ];
 
     expect(sortGroupedResources(groups, 'label', 'asc').map((group) => group.label)).toEqual([
@@ -143,5 +179,8 @@ describe('groupResources', () => {
     expect(sortGroupedResources(groups, 'assignedDays', 'asc').map((group) => group.label)).toEqual(
       ['Équipe 1', 'Équipe 2', 'Équipe 10'],
     );
+    expect(
+      sortGroupedResources(groups, 'fullTimeEquivalent', 'desc').map((group) => group.label),
+    ).toEqual(['Équipe 10', 'Équipe 1', 'Équipe 2']);
   });
 });

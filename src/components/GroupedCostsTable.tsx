@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Layers3 } from 'lucide-react';
-import { groupResources, sortGroupedResources, summarizeResources } from '../lib/resources';
+import {
+  getFullTimeEquivalent,
+  groupResources,
+  sortGroupedResources,
+  summarizeResources,
+} from '../lib/resources';
 import type { GroupSortKey } from '../lib/resources';
 import type { DtddResource, GroupByKey, SortDirection } from '../types';
 
@@ -28,6 +33,7 @@ function SortHeader({
   sortKey,
   direction,
   align = 'right',
+  title,
   onSort,
 }: {
   label: string;
@@ -35,6 +41,7 @@ function SortHeader({
   sortKey: GroupSortKey;
   direction: SortDirection;
   align?: 'left' | 'right';
+  title?: string;
   onSort: (key: GroupSortKey) => void;
 }) {
   const active = column === sortKey;
@@ -47,6 +54,7 @@ function SortHeader({
       <button
         type="button"
         onClick={() => onSort(column)}
+        title={title}
         className={`table-sort w-full ${align === 'right' ? 'justify-end' : ''}`}
       >
         {label}
@@ -117,6 +125,14 @@ export function GroupedCostsTable({
                   onSort={changeSort}
                 />
                 <SortHeader
+                  label="ETP"
+                  column="fullTimeEquivalent"
+                  sortKey={sortKey}
+                  direction={sortDirection}
+                  title="Équivalent temps plein sur une base de 185 jours annuels"
+                  onSort={changeSort}
+                />
+                <SortHeader
                   label="Coût total HT"
                   column="totalCost"
                   sortKey={sortKey}
@@ -131,6 +147,7 @@ export function GroupedCostsTable({
                   <td className="text-left font-bold text-slate-800">{group.label}</td>
                   <td>{group.people}</td>
                   <td>{number(group.assignedDays)}</td>
+                  <td>{number(group.fullTimeEquivalent)}</td>
                   <td>{currency(group.totalCost)}</td>
                 </tr>
               ))}
@@ -140,6 +157,7 @@ export function GroupedCostsTable({
                 <th className="text-left">Total</th>
                 <th>{resources.length}</th>
                 <th>{number(totals.assignedDays)}</th>
+                <th>{number(getFullTimeEquivalent(totals.assignedDays))}</th>
                 <th>{currency(totals.totalCost)}</th>
               </tr>
             </tfoot>

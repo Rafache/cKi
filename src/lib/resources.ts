@@ -119,6 +119,12 @@ export function summarizeResources(resources: DtddResource[]) {
   };
 }
 
+export const ANNUAL_WORKING_DAYS = 185;
+
+export function getFullTimeEquivalent(assignedDays: number): number {
+  return assignedDays / ANNUAL_WORKING_DAYS;
+}
+
 const classificationLabels = {
   internal: 'Interne',
   external: 'Prestataire externe',
@@ -142,6 +148,7 @@ export interface GroupedResourceSummary {
   label: string;
   people: number;
   assignedDays: number;
+  fullTimeEquivalent: number;
   totalCost: number;
 }
 
@@ -163,6 +170,7 @@ export function groupResources(
         label,
         people: items.length,
         assignedDays: totals.assignedDays,
+        fullTimeEquivalent: getFullTimeEquivalent(totals.assignedDays),
         totalCost: totals.totalCost,
       };
     })
