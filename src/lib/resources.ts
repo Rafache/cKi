@@ -119,20 +119,39 @@ export function summarizeResources(resources: DtddResource[]) {
   };
 }
 
-export const ANNUAL_WORKING_DAYS = 185;
+export const INTERNAL_ANNUAL_WORKING_DAYS = 194;
+export const EXTERNAL_ANNUAL_WORKING_DAYS = 218;
 
-export function getFullTimeEquivalentReferenceDays(
+export function getFullTimeEquivalentPeriodMultiplier(
   resources: DtddResource[],
   budgetYear: number | null,
   quarter: string | null,
 ): number {
-  if (quarter !== null) return ANNUAL_WORKING_DAYS / 4;
-  if (budgetYear !== null) return ANNUAL_WORKING_DAYS;
-  return ANNUAL_WORKING_DAYS * Math.max(1, getResourcesBudgetYears(resources).length);
+  if (quarter !== null) return 1 / 4;
+  if (budgetYear !== null) return 1;
+  return Math.max(1, getResourcesBudgetYears(resources).length);
 }
 
-export function getFullTimeEquivalent(assignedDays: number, referenceDays: number): number {
-  return assignedDays / referenceDays;
+export function getFullTimeEquivalent(
+  assignedDays: number,
+  classification: DtddResource['classification'],
+  periodMultiplier: number,
+): number {
+  const annualWorkingDays =
+    classification === 'external' ? EXTERNAL_ANNUAL_WORKING_DAYS : INTERNAL_ANNUAL_WORKING_DAYS;
+  return assignedDays / (annualWorkingDays * periodMultiplier);
+}
+
+export function summarizeFullTimeEquivalent(
+  resources: DtddResource[],
+  periodMultiplier: number,
+): number {
+  return resources.reduce(
+    (total, resource) =>
+      total +
+      getFullTimeEquivalent(resource.assignedDays ?? 0, resource.classification, periodMultiplier),
+    0,
+  );
 }
 
 const classificationLabels = {
@@ -167,7 +186,7 @@ export type GroupSortKey = keyof GroupedResourceSummary;
 export function groupResources(
   resources: DtddResource[],
   groupBy: Exclude<GroupByKey, ''>,
-  fullTimeEquivalentReferenceDays: number,
+  fullTimeEquivalentPeriodMultiplier: number,
 ): GroupedResourceSummary[] {
   const groups = new Map<string, DtddResource[]>();
   for (const resource of resources) {
@@ -181,10 +200,7 @@ export function groupResources(
         label,
         people: items.length,
         assignedDays: totals.assignedDays,
-        fullTimeEquivalent: getFullTimeEquivalent(
-          totals.assignedDays,
-          fullTimeEquivalentReferenceDays,
-        ),
+        fullTimeEquivalent: summarizeFullTimeEquivalent(items, fullTimeEquivalentPeriodMultiplier),
         totalCost: totals.totalCost,
       };
     })

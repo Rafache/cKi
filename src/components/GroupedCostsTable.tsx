@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Layers3 } from 'lucide-react';
 import {
-  getFullTimeEquivalent,
-  getFullTimeEquivalentReferenceDays,
+  EXTERNAL_ANNUAL_WORKING_DAYS,
+  getFullTimeEquivalentPeriodMultiplier,
   groupResources,
+  INTERNAL_ANNUAL_WORKING_DAYS,
   sortGroupedResources,
+  summarizeFullTimeEquivalent,
   summarizeResources,
 } from '../lib/resources';
 import type { GroupSortKey } from '../lib/resources';
@@ -78,21 +80,27 @@ export function GroupedCostsTable({
 }) {
   const [sortKey, setSortKey] = useState<GroupSortKey>('totalCost');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const fullTimeEquivalentReferenceDays = getFullTimeEquivalentReferenceDays(
+  const fullTimeEquivalentPeriodMultiplier = getFullTimeEquivalentPeriodMultiplier(
     resources,
     budgetYear,
     quarter,
   );
+  const internalReferenceDays = INTERNAL_ANNUAL_WORKING_DAYS * fullTimeEquivalentPeriodMultiplier;
+  const externalReferenceDays = EXTERNAL_ANNUAL_WORKING_DAYS * fullTimeEquivalentPeriodMultiplier;
   const groups = useMemo(
     () =>
       sortGroupedResources(
-        groupResources(resources, groupBy, fullTimeEquivalentReferenceDays),
+        groupResources(resources, groupBy, fullTimeEquivalentPeriodMultiplier),
         sortKey,
         sortDirection,
       ),
-    [resources, groupBy, fullTimeEquivalentReferenceDays, sortKey, sortDirection],
+    [resources, groupBy, fullTimeEquivalentPeriodMultiplier, sortKey, sortDirection],
   );
   const totals = summarizeResources(resources);
+  const totalFullTimeEquivalent = summarizeFullTimeEquivalent(
+    resources,
+    fullTimeEquivalentPeriodMultiplier,
+  );
   const changeSort = (key: GroupSortKey) => {
     if (key === sortKey) setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
     else {
@@ -144,7 +152,7 @@ export function GroupedCostsTable({
                   column="fullTimeEquivalent"
                   sortKey={sortKey}
                   direction={sortDirection}
-                  title={`Équivalent temps plein sur une base de ${number(fullTimeEquivalentReferenceDays)} jours`}
+                  title={`Équivalent temps plein : base de ${number(internalReferenceDays)} jours pour les internes et ${number(externalReferenceDays)} jours pour les externes`}
                   onSort={changeSort}
                 />
                 <SortHeader
@@ -172,11 +180,7 @@ export function GroupedCostsTable({
                 <th className="text-left">Total</th>
                 <th>{resources.length}</th>
                 <th>{number(totals.assignedDays)}</th>
-                <th>
-                  {number(
-                    getFullTimeEquivalent(totals.assignedDays, fullTimeEquivalentReferenceDays),
-                  )}
-                </th>
+                <th>{number(totalFullTimeEquivalent)}</th>
                 <th>{currency(totals.totalCost)}</th>
               </tr>
             </tfoot>

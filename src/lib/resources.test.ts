@@ -5,10 +5,11 @@ import {
   EMPTY_FILTERS,
   filterResources,
   getFullTimeEquivalent,
-  getFullTimeEquivalentReferenceDays,
+  getFullTimeEquivalentPeriodMultiplier,
   groupResources,
   sortGroupedResources,
   sortResources,
+  summarizeFullTimeEquivalent,
   summarizeResources,
 } from './resources';
 
@@ -105,8 +106,8 @@ describe('summarizeResources', () => {
             capacity: {
               schedule: {
                 items: [
-                  { year: 2024, month: 9, assigned: { days: 185 } },
-                  { year: 2025, month: 9, assigned: { days: 185 } },
+                  { year: 2024, month: 9, assigned: { days: 10 } },
+                  { year: 2025, month: 9, assigned: { days: 10 } },
                 ],
               },
             },
@@ -115,11 +116,21 @@ describe('summarizeResources', () => {
       }),
     );
 
-    expect(getFullTimeEquivalentReferenceDays([resource], null, null)).toBe(370);
-    expect(getFullTimeEquivalentReferenceDays([resource], 2024, null)).toBe(185);
-    expect(getFullTimeEquivalentReferenceDays([resource], null, '2025-Q3')).toBe(46.25);
-    expect(getFullTimeEquivalent(370, 370)).toBe(1);
-    expect(getFullTimeEquivalent(46.25, 46.25)).toBe(1);
+    expect(getFullTimeEquivalentPeriodMultiplier([resource], null, null)).toBe(2);
+    expect(getFullTimeEquivalentPeriodMultiplier([resource], 2024, null)).toBe(1);
+    expect(getFullTimeEquivalentPeriodMultiplier([resource], null, '2025-Q3')).toBe(0.25);
+    expect(getFullTimeEquivalent(388, 'internal', 2)).toBe(1);
+    expect(getFullTimeEquivalent(436, 'external', 2)).toBe(1);
+    expect(getFullTimeEquivalent(48.5, 'unknown', 0.25)).toBe(1);
+    expect(
+      summarizeFullTimeEquivalent(
+        [
+          { ...resources[0], classification: 'internal', assignedDays: 194 },
+          { ...resources[1], classification: 'external', assignedDays: 218 },
+        ],
+        1,
+      ),
+    ).toBe(2);
   });
 });
 
@@ -129,36 +140,36 @@ describe('groupResources', () => {
       {
         ...resources[0],
         classification: 'internal' as const,
-        assignedDays: 1.5,
+        assignedDays: 194,
         totalCost: 100,
       },
       {
         ...resources[1],
         classification: 'external' as const,
-        assignedDays: 2,
+        assignedDays: 100,
         totalCost: 250,
       },
       {
         ...resources[1],
         id: '3',
         classification: 'external' as const,
-        assignedDays: 3.5,
+        assignedDays: 118,
         totalCost: 300,
       },
     ];
-    expect(groupResources(rows, 'classification', 185)).toEqual([
+    expect(groupResources(rows, 'classification', 1)).toEqual([
       {
         label: 'Prestataire externe',
         people: 2,
-        assignedDays: 5.5,
-        fullTimeEquivalent: 5.5 / 185,
+        assignedDays: 218,
+        fullTimeEquivalent: 1,
         totalCost: 550,
       },
       {
         label: 'Interne',
         people: 1,
-        assignedDays: 1.5,
-        fullTimeEquivalent: 1.5 / 185,
+        assignedDays: 194,
+        fullTimeEquivalent: 1,
         totalCost: 100,
       },
     ]);
@@ -170,21 +181,21 @@ describe('groupResources', () => {
         label: 'Équipe 10',
         people: 1,
         assignedDays: 12,
-        fullTimeEquivalent: 12 / 185,
+        fullTimeEquivalent: 0.06,
         totalCost: 1200,
       },
       {
         label: 'Équipe 2',
         people: 3,
         assignedDays: 8,
-        fullTimeEquivalent: 8 / 185,
+        fullTimeEquivalent: 0.04,
         totalCost: 2400,
       },
       {
         label: 'Équipe 1',
         people: 2,
         assignedDays: 8,
-        fullTimeEquivalent: 8 / 185,
+        fullTimeEquivalent: 0.04,
         totalCost: 1600,
       },
     ];
