@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, LoaderCircle } from 'lucide-react';
 import { AuthModal } from './components/AuthModal';
 import { FiltersBar } from './components/FiltersBar';
+import { FullTimeEquivalentTrendChart } from './components/FullTimeEquivalentTrendChart';
 import { Header } from './components/Header';
 import { GroupedCostsTable } from './components/GroupedCostsTable';
 import { MetricsStrip } from './components/MetricsStrip';
@@ -100,6 +101,12 @@ export default function App() {
                 setFilters(nextFilters);
                 setPage(1);
               }}
+            />
+            <FullTimeEquivalentTrendChart
+              resources={filtered}
+              budgetYear={filters.budgetYear}
+              quarter={filters.quarter}
+              groupBy={filters.groupBy}
             />
             {filters.groupBy && (
               <GroupedCostsTable
