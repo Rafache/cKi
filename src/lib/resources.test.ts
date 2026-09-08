@@ -5,6 +5,7 @@ import {
   EMPTY_FILTERS,
   filterResources,
   getFullTimeEquivalent,
+  getFullTimeEquivalentReferenceDays,
   groupResources,
   sortGroupedResources,
   sortResources,
@@ -96,9 +97,29 @@ describe('summarizeResources', () => {
     });
   });
 
-  it('calcule les ETP sur la base de 185 jours annuels', () => {
-    expect(getFullTimeEquivalent(185)).toBe(1);
-    expect(getFullTimeEquivalent(92.5)).toBe(0.5);
+  it('adapte la base ETP à la période sélectionnée', () => {
+    const resource = mapMember(
+      member({
+        periods: [
+          {
+            capacity: {
+              schedule: {
+                items: [
+                  { year: 2024, month: 9, assigned: { days: 185 } },
+                  { year: 2025, month: 9, assigned: { days: 185 } },
+                ],
+              },
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(getFullTimeEquivalentReferenceDays([resource], null, null)).toBe(370);
+    expect(getFullTimeEquivalentReferenceDays([resource], 2024, null)).toBe(185);
+    expect(getFullTimeEquivalentReferenceDays([resource], null, '2025-Q3')).toBe(46.25);
+    expect(getFullTimeEquivalent(370, 370)).toBe(1);
+    expect(getFullTimeEquivalent(46.25, 46.25)).toBe(1);
   });
 });
 
@@ -125,7 +146,7 @@ describe('groupResources', () => {
         totalCost: 300,
       },
     ];
-    expect(groupResources(rows, 'classification')).toEqual([
+    expect(groupResources(rows, 'classification', 185)).toEqual([
       {
         label: 'Prestataire externe',
         people: 2,

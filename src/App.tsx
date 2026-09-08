@@ -102,7 +102,12 @@ export default function App() {
               }}
             />
             {filters.groupBy && (
-              <GroupedCostsTable resources={filtered} groupBy={filters.groupBy} />
+              <GroupedCostsTable
+                resources={filtered}
+                groupBy={filters.groupBy}
+                budgetYear={filters.budgetYear}
+                quarter={filters.quarter}
+              />
             )}
             <ResourcesTable
               resources={paginated}

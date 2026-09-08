@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Layers3 } from 'lucide-react';
 import {
   getFullTimeEquivalent,
+  getFullTimeEquivalentReferenceDays,
   groupResources,
   sortGroupedResources,
   summarizeResources,
@@ -67,15 +68,29 @@ function SortHeader({
 export function GroupedCostsTable({
   resources,
   groupBy,
+  budgetYear,
+  quarter,
 }: {
   resources: DtddResource[];
   groupBy: Exclude<GroupByKey, ''>;
+  budgetYear: number | null;
+  quarter: string | null;
 }) {
   const [sortKey, setSortKey] = useState<GroupSortKey>('totalCost');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const fullTimeEquivalentReferenceDays = getFullTimeEquivalentReferenceDays(
+    resources,
+    budgetYear,
+    quarter,
+  );
   const groups = useMemo(
-    () => sortGroupedResources(groupResources(resources, groupBy), sortKey, sortDirection),
-    [resources, groupBy, sortKey, sortDirection],
+    () =>
+      sortGroupedResources(
+        groupResources(resources, groupBy, fullTimeEquivalentReferenceDays),
+        sortKey,
+        sortDirection,
+      ),
+    [resources, groupBy, fullTimeEquivalentReferenceDays, sortKey, sortDirection],
   );
   const totals = summarizeResources(resources);
   const changeSort = (key: GroupSortKey) => {
@@ -129,7 +144,7 @@ export function GroupedCostsTable({
                   column="fullTimeEquivalent"
                   sortKey={sortKey}
                   direction={sortDirection}
-                  title="Équivalent temps plein sur une base de 185 jours annuels"
+                  title={`Équivalent temps plein sur une base de ${number(fullTimeEquivalentReferenceDays)} jours`}
                   onSort={changeSort}
                 />
                 <SortHeader
@@ -157,7 +172,11 @@ export function GroupedCostsTable({
                 <th className="text-left">Total</th>
                 <th>{resources.length}</th>
                 <th>{number(totals.assignedDays)}</th>
-                <th>{number(getFullTimeEquivalent(totals.assignedDays))}</th>
+                <th>
+                  {number(
+                    getFullTimeEquivalent(totals.assignedDays, fullTimeEquivalentReferenceDays),
+                  )}
+                </th>
                 <th>{currency(totals.totalCost)}</th>
               </tr>
             </tfoot>

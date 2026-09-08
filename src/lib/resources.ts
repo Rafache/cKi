@@ -1,4 +1,4 @@
-import { getBudgetRows, getQuarterRows } from './budget';
+import { getBudgetRows, getQuarterRows, getResourcesBudgetYears } from './budget';
 import type { DtddResource, GroupByKey, ResourceFilters, SortDirection, SortKey } from '../types';
 
 export const EMPTY_FILTERS: ResourceFilters = {
@@ -121,8 +121,18 @@ export function summarizeResources(resources: DtddResource[]) {
 
 export const ANNUAL_WORKING_DAYS = 185;
 
-export function getFullTimeEquivalent(assignedDays: number): number {
-  return assignedDays / ANNUAL_WORKING_DAYS;
+export function getFullTimeEquivalentReferenceDays(
+  resources: DtddResource[],
+  budgetYear: number | null,
+  quarter: string | null,
+): number {
+  if (quarter !== null) return ANNUAL_WORKING_DAYS / 4;
+  if (budgetYear !== null) return ANNUAL_WORKING_DAYS;
+  return ANNUAL_WORKING_DAYS * Math.max(1, getResourcesBudgetYears(resources).length);
+}
+
+export function getFullTimeEquivalent(assignedDays: number, referenceDays: number): number {
+  return assignedDays / referenceDays;
 }
 
 const classificationLabels = {
@@ -157,6 +167,7 @@ export type GroupSortKey = keyof GroupedResourceSummary;
 export function groupResources(
   resources: DtddResource[],
   groupBy: Exclude<GroupByKey, ''>,
+  fullTimeEquivalentReferenceDays: number,
 ): GroupedResourceSummary[] {
   const groups = new Map<string, DtddResource[]>();
   for (const resource of resources) {
@@ -170,7 +181,10 @@ export function groupResources(
         label,
         people: items.length,
         assignedDays: totals.assignedDays,
-        fullTimeEquivalent: getFullTimeEquivalent(totals.assignedDays),
+        fullTimeEquivalent: getFullTimeEquivalent(
+          totals.assignedDays,
+          fullTimeEquivalentReferenceDays,
+        ),
         totalCost: totals.totalCost,
       };
     })
