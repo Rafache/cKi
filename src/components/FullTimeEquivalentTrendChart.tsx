@@ -3,8 +3,20 @@ import { BarChart3 } from 'lucide-react';
 import { buildMonthlyFullTimeEquivalentTrend } from '../lib/fullTimeEquivalentTrend';
 import type { DtddResource, GroupByKey } from '../types';
 
-const GROUP_COLORS = ['#0f1ea0', '#d97706', '#7c3aed', '#0f766e', '#be185d'];
-const OTHER_COLOR = '#64748b';
+const GROUP_COLORS = [
+  '#0f1ea0',
+  '#d97706',
+  '#7c3aed',
+  '#0f766e',
+  '#be185d',
+  '#2563eb',
+  '#a16207',
+  '#6d28d9',
+  '#047857',
+  '#db2777',
+  '#0369a1',
+  '#c2410c',
+];
 const INTERNAL_COLOR = '#0f1ea0';
 const EXTERNAL_COLOR = '#7c3aed';
 
@@ -61,9 +73,7 @@ export function FullTimeEquivalentTrendChart({
     trend.seriesLabels.map((label, index) => [
       label,
       groupBy
-        ? label === 'Autres'
-          ? OTHER_COLOR
-          : GROUP_COLORS[index % GROUP_COLORS.length]
+        ? GROUP_COLORS[index % GROUP_COLORS.length]
         : label === 'Externes'
           ? EXTERNAL_COLOR
           : INTERNAL_COLOR,
@@ -94,22 +104,7 @@ export function FullTimeEquivalentTrendChart({
           </span>
           <div>
             <h2 className="font-black text-slate-900">Évolution mensuelle des ETP</h2>
-            <p className="text-xs text-slate-400">
-              Internes au-dessus de zéro · Externes en dessous · Bases mensuelles 194/12 et 218/12
-              jours
-            </p>
           </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 px-1 text-xs font-semibold text-slate-600">
-          {trend.seriesLabels.map((label) => (
-            <span key={label} className="inline-flex items-center gap-1.5">
-              <span
-                className="h-2.5 w-2.5 rounded-sm border border-black/10"
-                style={{ backgroundColor: colors.get(label) }}
-              />
-              {label}
-            </span>
-          ))}
         </div>
       </div>
       {hasValues ? (
@@ -186,7 +181,7 @@ export function FullTimeEquivalentTrendChart({
                               y={internalY}
                               width={barWidth}
                               height={internalHeight}
-                              fill={colors.get(segment.label) ?? OTHER_COLOR}
+                              fill={colors.get(segment.label) ?? INTERNAL_COLOR}
                               stroke="#ffffff"
                               strokeWidth="0.75"
                             >
@@ -199,7 +194,7 @@ export function FullTimeEquivalentTrendChart({
                               y={externalY}
                               width={barWidth}
                               height={externalHeight}
-                              fill={colors.get(segment.label) ?? OTHER_COLOR}
+                              fill={colors.get(segment.label) ?? EXTERNAL_COLOR}
                               fillOpacity={groupBy ? 0.68 : 0.86}
                               stroke="#ffffff"
                               strokeWidth="0.75"
@@ -223,19 +218,27 @@ export function FullTimeEquivalentTrendChart({
               })}
             </svg>
           </div>
-          <div className="flex flex-wrap justify-between gap-2 border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
-            <span>
-              {groupBy
-                ? `Barres empilées par ${groupLabels[groupBy]}`
-                : 'Survolez une barre pour afficher sa valeur exacte'}
-            </span>
-            {trend.collapsedGroupCount > 0 && (
-              <span>
-                « Autres » regroupe {trend.collapsedGroupCount} catégorie
-                {trend.collapsedGroupCount > 1 ? 's' : ''} supplémentaire
-                {trend.collapsedGroupCount > 1 ? 's' : ''}.
-              </span>
-            )}
+          <div
+            className="overflow-x-auto border-t border-slate-100"
+            role="region"
+            aria-label="Légende du graphique, défilement horizontal"
+          >
+            <div className="flex min-w-max items-center gap-4 px-4 py-2 text-xs font-semibold text-slate-600">
+              {trend.seriesLabels.map((label) => (
+                <span key={label} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-sm border border-black/10"
+                    style={{ backgroundColor: colors.get(label) }}
+                  />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
+            {groupBy
+              ? `Barres empilées par ${groupLabels[groupBy]}`
+              : 'Survolez une barre pour afficher sa valeur exacte'}
           </div>
         </>
       ) : (

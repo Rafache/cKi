@@ -7,9 +7,6 @@ import type {
   ResourceClassification,
 } from '../types';
 
-const MAX_VISIBLE_GROUPS = 5;
-const OTHER_GROUP_LABEL = 'Autres';
-
 export interface MonthlyFullTimeEquivalentSegment {
   label: string;
   internal: number;
@@ -27,7 +24,6 @@ export interface MonthlyFullTimeEquivalentPoint {
 export interface MonthlyFullTimeEquivalentTrend {
   points: MonthlyFullTimeEquivalentPoint[];
   seriesLabels: string[];
-  collapsedGroupCount: number;
 }
 
 interface ScheduleContribution {
@@ -158,22 +154,11 @@ export function buildMonthlyFullTimeEquivalentTrend(
   const rankedLabels = [...totalsByGroup.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'))
     .map(([label]) => label);
-  const retainedLabels =
-    groupBy && rankedLabels.length > MAX_VISIBLE_GROUPS
-      ? rankedLabels.slice(0, MAX_VISIBLE_GROUPS)
-      : rankedLabels;
-  const retainedLabelSet = new Set(retainedLabels);
-  const collapsedGroupCount = groupBy
-    ? Math.max(0, rankedLabels.length - retainedLabels.length)
-    : 0;
-  const seriesLabels =
-    collapsedGroupCount > 0 ? [...retainedLabels, OTHER_GROUP_LABEL] : retainedLabels;
+  const seriesLabels = rankedLabels;
 
   const segmentsByMonth = new Map<string, Map<string, MonthlyFullTimeEquivalentSegment>>();
   for (const contribution of contributions) {
-    const label = retainedLabelSet.has(contribution.groupLabel)
-      ? contribution.groupLabel
-      : OTHER_GROUP_LABEL;
+    const label = contribution.groupLabel;
     const monthSegments = segmentsByMonth.get(contribution.key) ?? new Map();
     const segment = monthSegments.get(label) ?? { label, internal: 0, external: 0 };
     if (contribution.classification === 'external') {
@@ -199,5 +184,5 @@ export function buildMonthlyFullTimeEquivalentTrend(
     };
   });
 
-  return { points, seriesLabels, collapsedGroupCount };
+  return { points, seriesLabels };
 }

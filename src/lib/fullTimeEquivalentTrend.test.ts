@@ -71,6 +71,42 @@ describe('buildMonthlyFullTimeEquivalentTrend', () => {
     expect(april.segments[1].external).toBeCloseTo(1);
   });
 
+  it('conserve toutes les séries lorsque le regroupement contient de nombreuses valeurs', () => {
+    const resources = Array.from({ length: 7 }, (_, index) =>
+      mapMember(
+        member({
+          id: index + 10,
+          team: { name: `TEAM-${index + 1}`, parent: { name: 'DTDD' } },
+          periods: [
+            {
+              start: '2026-01-01',
+              type: { label: 'Interne' },
+              capacity: {
+                schedule: {
+                  items: [{ year: 2026, month: 4, assigned: { days: 194 / 12 } }],
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    );
+
+    const trend = buildMonthlyFullTimeEquivalentTrend(resources, null, '2026-Q2', 'team');
+
+    expect(trend.seriesLabels).toHaveLength(7);
+    expect(trend.seriesLabels).toEqual([
+      'TEAM-1',
+      'TEAM-2',
+      'TEAM-3',
+      'TEAM-4',
+      'TEAM-5',
+      'TEAM-6',
+      'TEAM-7',
+    ]);
+    expect(trend.points[0].segments).toHaveLength(7);
+  });
+
   it('affiche les douze mois d’une année budgétaire', () => {
     const trend = buildMonthlyFullTimeEquivalentTrend([internal], 2026, null, '');
 
