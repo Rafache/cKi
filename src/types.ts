@@ -1,5 +1,6 @@
 export type ResourceClassification = 'internal' | 'external' | 'unknown';
 export type TrendMetric = 'fte' | 'headcount';
+export type TrendGranularity = 'month' | 'quarter' | 'year';
 
 export interface AbraxioLabel {
   id?: number | string | null;

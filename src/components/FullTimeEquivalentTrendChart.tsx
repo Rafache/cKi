@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { buildMonthlyFullTimeEquivalentTrend } from '../lib/fullTimeEquivalentTrend';
-import type { DtddResource, GroupByKey, TrendMetric } from '../types';
+import type { DtddResource, GroupByKey, TrendGranularity, TrendMetric } from '../types';
 
 const GROUP_COLORS = [
   '#0f1ea0',
@@ -28,6 +28,23 @@ function formatMetricValue(value: number, metric: TrendMetric): string {
     return `${number(value)} ${value > 1 ? 'personnes' : 'personne'}`;
   }
   return `${number(value)} ETP`;
+}
+
+function getPeriodAdjective(granularity: TrendGranularity): string {
+  return granularity === 'quarter'
+    ? 'trimestrielle'
+    : granularity === 'year'
+      ? 'annuelle'
+      : 'mensuelle';
+}
+
+function getPeriodNoun(granularity: TrendGranularity): string {
+  return granularity === 'quarter' ? 'trimestre' : granularity === 'year' ? 'année' : 'mois';
+}
+
+function getTrendChartTitle(metric: TrendMetric, granularity: TrendGranularity): string {
+  const metricLabel = metric === 'headcount' ? 'du nombre de personnes' : 'des ETP';
+  return `Évolution ${getPeriodAdjective(granularity)} ${metricLabel}`;
 }
 
 const groupLabels: Record<Exclude<GroupByKey, ''>, string> = {
@@ -59,11 +76,20 @@ export function FullTimeEquivalentTrendChart({
   groupBy: GroupByKey;
 }) {
   const [metric, setMetric] = useState<TrendMetric>('fte');
+  const [granularity, setGranularity] = useState<TrendGranularity>('month');
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const trend = useMemo(
-    () => buildMonthlyFullTimeEquivalentTrend(resources, budgetYear, quarter, groupBy, metric),
-    [resources, budgetYear, quarter, groupBy, metric],
+    () =>
+      buildMonthlyFullTimeEquivalentTrend(
+        resources,
+        budgetYear,
+        quarter,
+        groupBy,
+        metric,
+        granularity,
+      ),
+    [resources, budgetYear, quarter, groupBy, metric, granularity],
   );
   useEffect(() => {
     const container = chartContainerRef.current;
@@ -113,42 +139,82 @@ export function FullTimeEquivalentTrendChart({
             <BarChart3 className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="font-black text-slate-900">
-              {metric === 'headcount'
-                ? 'Évolution mensuelle du nombre de personnes'
-                : 'Évolution mensuelle des ETP'}
-            </h2>
+            <h2 className="font-black text-slate-900">{getTrendChartTitle(metric, granularity)}</h2>
           </div>
         </div>
-        <div
-          className="inline-flex rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 text-xs font-semibold"
-          role="group"
-          aria-label="Métrique de l’évolution mensuelle"
-        >
-          <button
-            type="button"
-            onClick={() => setMetric('fte')}
-            aria-pressed={metric === 'fte'}
-            className={`rounded-md px-2.5 py-1 transition ${
-              metric === 'fte'
-                ? 'bg-white font-bold text-brand shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="inline-flex rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 text-xs font-semibold"
+            role="group"
+            aria-label="Périodicité de l’évolution"
           >
-            ETP
-          </button>
-          <button
-            type="button"
-            onClick={() => setMetric('headcount')}
-            aria-pressed={metric === 'headcount'}
-            className={`rounded-md px-2.5 py-1 transition ${
-              metric === 'headcount'
-                ? 'bg-white font-bold text-brand shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            <button
+              type="button"
+              onClick={() => setGranularity('month')}
+              aria-pressed={granularity === 'month'}
+              className={`rounded-md px-2.5 py-1 transition ${
+                granularity === 'month'
+                  ? 'bg-white font-bold text-brand shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Mois
+            </button>
+            <button
+              type="button"
+              onClick={() => setGranularity('quarter')}
+              aria-pressed={granularity === 'quarter'}
+              className={`rounded-md px-2.5 py-1 transition ${
+                granularity === 'quarter'
+                  ? 'bg-white font-bold text-brand shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Trimestre
+            </button>
+            <button
+              type="button"
+              onClick={() => setGranularity('year')}
+              aria-pressed={granularity === 'year'}
+              className={`rounded-md px-2.5 py-1 transition ${
+                granularity === 'year'
+                  ? 'bg-white font-bold text-brand shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Année
+            </button>
+          </div>
+          <div
+            className="inline-flex rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 text-xs font-semibold"
+            role="group"
+            aria-label="Métrique de l’évolution"
           >
-            Nombre de personnes
-          </button>
+            <button
+              type="button"
+              onClick={() => setMetric('fte')}
+              aria-pressed={metric === 'fte'}
+              className={`rounded-md px-2.5 py-1 transition ${
+                metric === 'fte'
+                  ? 'bg-white font-bold text-brand shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              ETP
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetric('headcount')}
+              aria-pressed={metric === 'headcount'}
+              className={`rounded-md px-2.5 py-1 transition ${
+                metric === 'headcount'
+                  ? 'bg-white font-bold text-brand shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Nombre de personnes
+            </button>
+          </div>
         </div>
       </div>
       {hasValues ? (
@@ -157,7 +223,7 @@ export function FullTimeEquivalentTrendChart({
             ref={chartContainerRef}
             className="overflow-x-auto"
             role="region"
-            aria-label={`Graphique ${metric === 'headcount' ? 'du nombre de personnes mensuel' : 'des ETP mensuels'}, défilement horizontal`}
+            aria-label={`Graphique ${metric === 'headcount' ? 'du nombre de personnes' : 'des ETP'} ${granularity === 'quarter' ? 'trimestriel' : granularity === 'year' ? 'annuel' : 'mensuel'}, défilement horizontal`}
           >
             <svg
               width={chartWidth}
@@ -165,15 +231,13 @@ export function FullTimeEquivalentTrendChart({
               role="img"
               aria-label={
                 metric === 'headcount'
-                  ? 'Personnes internes positives et personnes externes négatives par mois'
-                  : 'ETP internes positifs et ETP externes négatifs par mois'
+                  ? `Personnes internes positives et personnes externes négatives par ${getPeriodNoun(granularity)}`
+                  : `ETP internes positifs et ETP externes négatifs par ${getPeriodNoun(granularity)}`
               }
               className="block"
             >
               <title>
-                {metric === 'headcount'
-                  ? 'Évolution mensuelle des personnes internes et externes'
-                  : 'Évolution mensuelle des ETP internes et externes'}
+                {`Évolution ${getPeriodAdjective(granularity)} ${metric === 'headcount' ? 'du nombre de personnes internes et externes' : 'des ETP internes et externes'}`}
               </title>
               <desc>
                 {metric === 'headcount'

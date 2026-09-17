@@ -150,4 +150,65 @@ describe('buildMonthlyFullTimeEquivalentTrend', () => {
     expect(april.segments[1].internal).toBe(0);
     expect(april.segments[1].external).toBe(1);
   });
+
+  it('agrège les ETP par trimestre', () => {
+    const trend = buildMonthlyFullTimeEquivalentTrend(
+      [internal, external],
+      null,
+      '2026-Q2',
+      '',
+      'fte',
+      'quarter',
+    );
+
+    expect(trend.points).toHaveLength(1);
+    expect(trend.points[0].key).toBe('2026-Q2');
+    expect(trend.points[0].label).toBe('T2 2026');
+    expect(trend.points[0].totalInternal).toBeCloseTo(0.5);
+    expect(trend.points[0].totalExternal).toBeCloseTo(1 / 3);
+  });
+
+  it('compte les personnes uniques par trimestre en mode headcount', () => {
+    const trend = buildMonthlyFullTimeEquivalentTrend(
+      [internal, external],
+      null,
+      '2026-Q2',
+      '',
+      'headcount',
+      'quarter',
+    );
+
+    expect(trend.points).toHaveLength(1);
+    expect(trend.points[0].key).toBe('2026-Q2');
+    expect(trend.points[0].totalInternal).toBe(1);
+    expect(trend.points[0].totalExternal).toBe(1);
+  });
+
+  it('agrège les ETP et effectifs par année budgétaire', () => {
+    const trendFte = buildMonthlyFullTimeEquivalentTrend(
+      [internal],
+      null,
+      '2026-Q2',
+      '',
+      'fte',
+      'year',
+    );
+
+    expect(trendFte.points).toHaveLength(1);
+    expect(trendFte.points[0].key).toBe('2025');
+    expect(trendFte.points[0].label).toBe('2025–2026');
+    expect(trendFte.points[0].totalInternal).toBeCloseTo(0.125);
+
+    const trendHeadcount = buildMonthlyFullTimeEquivalentTrend(
+      [internal],
+      null,
+      '2026-Q2',
+      '',
+      'headcount',
+      'year',
+    );
+
+    expect(trendHeadcount.points).toHaveLength(1);
+    expect(trendHeadcount.points[0].totalInternal).toBe(1);
+  });
 });

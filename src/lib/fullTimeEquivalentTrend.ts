@@ -1,14 +1,21 @@
-import { getBudgetYearStart, getConsolidatedSchedule, getQuarterKey } from './budget';
+import {
+  formatBudgetYear,
+  formatQuarter,
+  getBudgetYearStart,
+  getConsolidatedSchedule,
+  getQuarterKey,
+} from './budget';
 import { getFullTimeEquivalent } from './resources';
 import type {
   ConsolidatedScheduleRow,
   DtddResource,
   GroupByKey,
   ResourceClassification,
+  TrendGranularity,
   TrendMetric,
 } from '../types';
 
-export type { TrendMetric };
+export type { TrendGranularity, TrendMetric };
 
 export interface MonthlyFullTimeEquivalentSegment {
   label: string;
@@ -124,12 +131,50 @@ function isRowSelected(
   return true;
 }
 
+function getTrendPeriods(
+  monthKeys: string[],
+  granularity: TrendGranularity,
+): { key: string; label: string }[] {
+  if (granularity === 'quarter') {
+    const uniqueKeys = [
+      ...new Set(
+        monthKeys.map((key) => {
+          const [year, month] = key.split('-').map(Number);
+          return getQuarterKey(year, month);
+        }),
+      ),
+    ];
+    return uniqueKeys.map((key) => ({ key, label: formatQuarter(key) }));
+  }
+
+  if (granularity === 'year') {
+    const uniqueKeys = [
+      ...new Set(
+        monthKeys.map((key) => {
+          const [year, month] = key.split('-').map(Number);
+          return String(getBudgetYearStart(year, month));
+        }),
+      ),
+    ];
+    return uniqueKeys.map((key) => ({ key, label: formatBudgetYear(Number(key)) }));
+  }
+
+  return monthKeys.map((key) => ({ key, label: formatMonth(key) }));
+}
+
+function getRowPeriodKey(year: number, month: number, granularity: TrendGranularity): string {
+  if (granularity === 'quarter') return getQuarterKey(year, month);
+  if (granularity === 'year') return String(getBudgetYearStart(year, month));
+  return monthKey(year, month);
+}
+
 export function buildMonthlyFullTimeEquivalentTrend(
   resources: DtddResource[],
   budgetYear: number | null,
   quarter: string | null,
   groupBy: GroupByKey,
   metric: TrendMetric = 'fte',
+  granularity: TrendGranularity = 'month',
 ): MonthlyFullTimeEquivalentTrend {
   const selectedRows = resources.flatMap((resource) =>
     getConsolidatedSchedule(resource)
@@ -138,19 +183,44 @@ export function buildMonthlyFullTimeEquivalentTrend(
   );
   const availableMonths = [...new Set(selectedRows.map(({ row }) => row.key))].sort();
   const monthKeys = getSelectedMonths(availableMonths, budgetYear, quarter);
-  const contributions: ScheduleContribution[] = selectedRows.map(({ resource, row }) => {
+  const periods = getTrendPeriods(monthKeys, granularity);
+
+  const periodMultiplier = granularity === 'quarter' ? 1 / 4 : granularity === 'year' ? 1 : 1 / 12;
+
+  interface AggregatedEntry {
+    periodKey: string;
+    groupLabel: string;
+    classification: ResourceClassification;
+    assignedDays: number;
+  }
+
+  const aggregated = new Map<string, AggregatedEntry>();
+  for (const { resource, row } of selectedRows) {
     const classification = getScheduleClassification(resource, row);
-    const assignedDays = row.item.assignedDays ?? 0;
+    const groupLabel = getContributionGroupLabel(resource, row, groupBy, classification);
+    const periodKey = getRowPeriodKey(row.year, row.month, granularity);
+    const aggKey = `${periodKey}__${resource.id}__${groupLabel}__${classification}`;
+    const entry = aggregated.get(aggKey) ?? {
+      periodKey,
+      groupLabel,
+      classification,
+      assignedDays: 0,
+    };
+    entry.assignedDays += row.item.assignedDays ?? 0;
+    aggregated.set(aggKey, entry);
+  }
+
+  const contributions: ScheduleContribution[] = [...aggregated.values()].map((entry) => {
     const value =
       metric === 'headcount'
-        ? assignedDays > 0
+        ? entry.assignedDays > 0
           ? 1
           : 0
-        : getFullTimeEquivalent(assignedDays, classification, 1 / 12);
+        : getFullTimeEquivalent(entry.assignedDays, entry.classification, periodMultiplier);
     return {
-      key: row.key,
-      groupLabel: getContributionGroupLabel(resource, row, groupBy, classification),
-      classification,
+      key: entry.periodKey,
+      groupLabel: entry.groupLabel,
+      classification: entry.classification,
       value,
     };
   });
@@ -167,28 +237,28 @@ export function buildMonthlyFullTimeEquivalentTrend(
     .map(([label]) => label);
   const seriesLabels = rankedLabels;
 
-  const segmentsByMonth = new Map<string, Map<string, MonthlyFullTimeEquivalentSegment>>();
+  const segmentsByPeriod = new Map<string, Map<string, MonthlyFullTimeEquivalentSegment>>();
   for (const contribution of contributions) {
     const label = contribution.groupLabel;
-    const monthSegments = segmentsByMonth.get(contribution.key) ?? new Map();
-    const segment = monthSegments.get(label) ?? { label, internal: 0, external: 0 };
+    const periodSegments = segmentsByPeriod.get(contribution.key) ?? new Map();
+    const segment = periodSegments.get(label) ?? { label, internal: 0, external: 0 };
     if (contribution.classification === 'external') {
       segment.external += contribution.value;
     } else {
       segment.internal += contribution.value;
     }
-    monthSegments.set(label, segment);
-    segmentsByMonth.set(contribution.key, monthSegments);
+    periodSegments.set(label, segment);
+    segmentsByPeriod.set(contribution.key, periodSegments);
   }
 
-  const points = monthKeys.map((key) => {
-    const monthSegments = segmentsByMonth.get(key) ?? new Map();
+  const points = periods.map(({ key, label }) => {
+    const periodSegments = segmentsByPeriod.get(key) ?? new Map();
     const segments = seriesLabels.map(
-      (label) => monthSegments.get(label) ?? { label, internal: 0, external: 0 },
+      (sLabel) => periodSegments.get(sLabel) ?? { label: sLabel, internal: 0, external: 0 },
     );
     return {
       key,
-      label: formatMonth(key),
+      label,
       segments,
       totalInternal: segments.reduce((total, segment) => total + segment.internal, 0),
       totalExternal: segments.reduce((total, segment) => total + segment.external, 0),
