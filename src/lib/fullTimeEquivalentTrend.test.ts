@@ -114,4 +114,40 @@ describe('buildMonthlyFullTimeEquivalentTrend', () => {
     expect(trend.points[0].key).toBe('2026-07');
     expect(trend.points.at(-1)?.key).toBe('2027-06');
   });
+
+  it('compte les personnes présentes pour chaque mois en mode nombre de personnes', () => {
+    const trend = buildMonthlyFullTimeEquivalentTrend(
+      [internal, external],
+      null,
+      '2026-Q2',
+      '',
+      'headcount',
+    );
+
+    expect(trend.points.map((point) => point.key)).toEqual(['2026-04', '2026-05', '2026-06']);
+    expect(trend.seriesLabels).toEqual(['Internes', 'Externes']);
+    expect(trend.points[0].totalInternal).toBe(1);
+    expect(trend.points[0].totalExternal).toBe(1);
+    expect(trend.points[1].totalInternal).toBe(1);
+    expect(trend.points[1].totalExternal).toBe(0);
+    expect(trend.points[2].totalInternal).toBe(0);
+    expect(trend.points[2].totalExternal).toBe(0);
+  });
+
+  it('empile le nombre de personnes selon le regroupement actif', () => {
+    const trend = buildMonthlyFullTimeEquivalentTrend(
+      [internal, external],
+      null,
+      '2026-Q2',
+      'team',
+      'headcount',
+    );
+    const april = trend.points[0];
+
+    expect(trend.seriesLabels).toEqual(['DATA', 'CLOUD']);
+    expect(april.segments[0].internal).toBe(1);
+    expect(april.segments[0].external).toBe(0);
+    expect(april.segments[1].internal).toBe(0);
+    expect(april.segments[1].external).toBe(1);
+  });
 });

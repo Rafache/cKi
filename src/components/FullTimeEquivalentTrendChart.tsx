@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { buildMonthlyFullTimeEquivalentTrend } from '../lib/fullTimeEquivalentTrend';
-import type { DtddResource, GroupByKey } from '../types';
+import type { DtddResource, GroupByKey, TrendMetric } from '../types';
 
 const GROUP_COLORS = [
   '#0f1ea0',
@@ -23,6 +23,13 @@ const EXTERNAL_COLOR = '#7c3aed';
 const number = (value: number) =>
   new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value);
 
+function formatMetricValue(value: number, metric: TrendMetric): string {
+  if (metric === 'headcount') {
+    return `${number(value)} ${value > 1 ? 'personnes' : 'personne'}`;
+  }
+  return `${number(value)} ETP`;
+}
+
 const groupLabels: Record<Exclude<GroupByKey, ''>, string> = {
   classification: 'type',
   state: 'état',
@@ -31,12 +38,13 @@ const groupLabels: Record<Exclude<GroupByKey, ''>, string> = {
   supplier: 'fournisseur',
 };
 
-function niceMaximum(value: number): number {
-  if (value <= 0) return 1;
+function niceMaximum(value: number, integerSteps = false): number {
+  if (value <= 0) return integerSteps ? 2 : 1;
   const magnitude = 10 ** Math.floor(Math.log10(value));
   const normalized = value / magnitude;
-  const factor = [1, 2, 2.5, 5, 10].find((candidate) => candidate >= normalized) ?? 10;
-  return factor * magnitude;
+  const factors = integerSteps && magnitude >= 1 ? [2, 4, 6, 8, 10] : [1, 2, 2.5, 5, 10];
+  const factor = factors.find((candidate) => candidate >= normalized) ?? 10;
+  return Math.max(integerSteps ? 2 : 1, factor * magnitude);
 }
 
 export function FullTimeEquivalentTrendChart({
@@ -50,11 +58,12 @@ export function FullTimeEquivalentTrendChart({
   quarter: string | null;
   groupBy: GroupByKey;
 }) {
+  const [metric, setMetric] = useState<TrendMetric>('fte');
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const trend = useMemo(
-    () => buildMonthlyFullTimeEquivalentTrend(resources, budgetYear, quarter, groupBy),
-    [resources, budgetYear, quarter, groupBy],
+    () => buildMonthlyFullTimeEquivalentTrend(resources, budgetYear, quarter, groupBy, metric),
+    [resources, budgetYear, quarter, groupBy, metric],
   );
   useEffect(() => {
     const container = chartContainerRef.current;
@@ -68,6 +77,7 @@ export function FullTimeEquivalentTrendChart({
   );
   const maximum = niceMaximum(
     Math.max(0, ...trend.points.flatMap((point) => [point.totalInternal, point.totalExternal])),
+    metric === 'headcount',
   );
   const colors = new Map(
     trend.seriesLabels.map((label, index) => [
@@ -103,8 +113,42 @@ export function FullTimeEquivalentTrendChart({
             <BarChart3 className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="font-black text-slate-900">Évolution mensuelle des ETP</h2>
+            <h2 className="font-black text-slate-900">
+              {metric === 'headcount'
+                ? 'Évolution mensuelle du nombre de personnes'
+                : 'Évolution mensuelle des ETP'}
+            </h2>
           </div>
+        </div>
+        <div
+          className="inline-flex rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 text-xs font-semibold"
+          role="group"
+          aria-label="Métrique de l’évolution mensuelle"
+        >
+          <button
+            type="button"
+            onClick={() => setMetric('fte')}
+            aria-pressed={metric === 'fte'}
+            className={`rounded-md px-2.5 py-1 transition ${
+              metric === 'fte'
+                ? 'bg-white font-bold text-brand shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            ETP
+          </button>
+          <button
+            type="button"
+            onClick={() => setMetric('headcount')}
+            aria-pressed={metric === 'headcount'}
+            className={`rounded-md px-2.5 py-1 transition ${
+              metric === 'headcount'
+                ? 'bg-white font-bold text-brand shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Nombre de personnes
+          </button>
         </div>
       </div>
       {hasValues ? (
@@ -113,19 +157,28 @@ export function FullTimeEquivalentTrendChart({
             ref={chartContainerRef}
             className="overflow-x-auto"
             role="region"
-            aria-label="Graphique des ETP mensuels, défilement horizontal"
+            aria-label={`Graphique ${metric === 'headcount' ? 'du nombre de personnes mensuel' : 'des ETP mensuels'}, défilement horizontal`}
           >
             <svg
               width={chartWidth}
               height={chartHeight}
               role="img"
-              aria-label="ETP internes positifs et ETP externes négatifs par mois"
+              aria-label={
+                metric === 'headcount'
+                  ? 'Personnes internes positives et personnes externes négatives par mois'
+                  : 'ETP internes positifs et ETP externes négatifs par mois'
+              }
               className="block"
             >
-              <title>Évolution mensuelle des ETP internes et externes</title>
+              <title>
+                {metric === 'headcount'
+                  ? 'Évolution mensuelle des personnes internes et externes'
+                  : 'Évolution mensuelle des ETP internes et externes'}
+              </title>
               <desc>
-                Les barres internes sont affichées au-dessus de l’axe zéro et les barres externes en
-                dessous. Les valeurs sont empilées lorsque le regroupement est actif.
+                {metric === 'headcount'
+                  ? 'Les barres internes représentent le nombre de personnes au-dessus de l’axe zéro et les barres externes en dessous. Les valeurs sont empilées lorsque le regroupement est actif.'
+                  : 'Les barres internes sont affichées au-dessus de l’axe zéro et les barres externes en dessous. Les valeurs sont empilées lorsque le regroupement est actif.'}
               </desc>
               {ticks.map((tick) => {
                 const y = zeroY - (tick / maximum) * (halfHeight - 12);
@@ -185,7 +238,7 @@ export function FullTimeEquivalentTrendChart({
                               stroke="#ffffff"
                               strokeWidth="0.75"
                             >
-                              <title>{`${point.label} · Internes · ${segment.label} : ${number(segment.internal)} ETP`}</title>
+                              <title>{`${point.label} · Internes · ${segment.label} : ${formatMetricValue(segment.internal, metric)}`}</title>
                             </rect>
                           )}
                           {segment.external > 0 && (
@@ -199,7 +252,7 @@ export function FullTimeEquivalentTrendChart({
                               stroke="#ffffff"
                               strokeWidth="0.75"
                             >
-                              <title>{`${point.label} · Externes · ${segment.label} : ${number(segment.external)} ETP`}</title>
+                              <title>{`${point.label} · Externes · ${segment.label} : ${formatMetricValue(segment.external, metric)}`}</title>
                             </rect>
                           )}
                         </g>
@@ -242,7 +295,11 @@ export function FullTimeEquivalentTrendChart({
           </div>
         </>
       ) : (
-        <p className="p-6 text-sm text-slate-500">Aucune donnée ETP pour les filtres actifs.</p>
+        <p className="p-6 text-sm text-slate-500">
+          {metric === 'headcount'
+            ? 'Aucune personne pour les filtres actifs.'
+            : 'Aucune donnée ETP pour les filtres actifs.'}
+        </p>
       )}
     </section>
   );

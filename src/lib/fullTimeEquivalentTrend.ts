@@ -5,7 +5,10 @@ import type {
   DtddResource,
   GroupByKey,
   ResourceClassification,
+  TrendMetric,
 } from '../types';
+
+export type { TrendMetric };
 
 export interface MonthlyFullTimeEquivalentSegment {
   label: string;
@@ -30,7 +33,7 @@ interface ScheduleContribution {
   key: string;
   groupLabel: string;
   classification: ResourceClassification;
-  fullTimeEquivalent: number;
+  value: number;
 }
 
 const monthFormatter = new Intl.DateTimeFormat('fr-FR', {
@@ -126,6 +129,7 @@ export function buildMonthlyFullTimeEquivalentTrend(
   budgetYear: number | null,
   quarter: string | null,
   groupBy: GroupByKey,
+  metric: TrendMetric = 'fte',
 ): MonthlyFullTimeEquivalentTrend {
   const selectedRows = resources.flatMap((resource) =>
     getConsolidatedSchedule(resource)
@@ -136,11 +140,18 @@ export function buildMonthlyFullTimeEquivalentTrend(
   const monthKeys = getSelectedMonths(availableMonths, budgetYear, quarter);
   const contributions: ScheduleContribution[] = selectedRows.map(({ resource, row }) => {
     const classification = getScheduleClassification(resource, row);
+    const assignedDays = row.item.assignedDays ?? 0;
+    const value =
+      metric === 'headcount'
+        ? assignedDays > 0
+          ? 1
+          : 0
+        : getFullTimeEquivalent(assignedDays, classification, 1 / 12);
     return {
       key: row.key,
       groupLabel: getContributionGroupLabel(resource, row, groupBy, classification),
       classification,
-      fullTimeEquivalent: getFullTimeEquivalent(row.item.assignedDays ?? 0, classification, 1 / 12),
+      value,
     };
   });
 
@@ -148,7 +159,7 @@ export function buildMonthlyFullTimeEquivalentTrend(
   for (const contribution of contributions) {
     totalsByGroup.set(
       contribution.groupLabel,
-      (totalsByGroup.get(contribution.groupLabel) ?? 0) + contribution.fullTimeEquivalent,
+      (totalsByGroup.get(contribution.groupLabel) ?? 0) + contribution.value,
     );
   }
   const rankedLabels = [...totalsByGroup.entries()]
@@ -162,9 +173,9 @@ export function buildMonthlyFullTimeEquivalentTrend(
     const monthSegments = segmentsByMonth.get(contribution.key) ?? new Map();
     const segment = monthSegments.get(label) ?? { label, internal: 0, external: 0 };
     if (contribution.classification === 'external') {
-      segment.external += contribution.fullTimeEquivalent;
+      segment.external += contribution.value;
     } else {
-      segment.internal += contribution.fullTimeEquivalent;
+      segment.internal += contribution.value;
     }
     monthSegments.set(label, segment);
     segmentsByMonth.set(contribution.key, monthSegments);
