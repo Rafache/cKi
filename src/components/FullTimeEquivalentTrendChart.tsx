@@ -128,7 +128,7 @@ export function FullTimeEquivalentTrendChart({
   const halfHeight = plotHeight / 2;
   const monthWidth = trend.points.length > 0 ? plotWidth / trend.points.length : plotWidth;
   const barWidth = Math.min(36, monthWidth * 0.58);
-  const scaledHeight = (value: number) => (value / maximum) * (halfHeight - 12);
+  const scaledHeight = (value: number) => (value / maximum) * (halfHeight - 16);
   const ticks = [maximum, maximum / 2, 0, -maximum / 2, -maximum];
 
   return (
@@ -245,7 +245,7 @@ export function FullTimeEquivalentTrendChart({
                   : 'Les barres internes sont affichées au-dessus de l’axe zéro et les barres externes en dessous. Les valeurs sont empilées lorsque le regroupement est actif.'}
               </desc>
               {ticks.map((tick) => {
-                const y = zeroY - (tick / maximum) * (halfHeight - 12);
+                const y = zeroY - (tick / maximum) * (halfHeight - 16);
                 return (
                   <g key={tick}>
                     <line
@@ -322,6 +322,27 @@ export function FullTimeEquivalentTrendChart({
                         </g>
                       );
                     })}
+                    {point.totalInternal > 0 && (
+                      <text
+                        x={centerX}
+                        y={zeroY - scaledHeight(point.totalInternal) - 4}
+                        textAnchor="middle"
+                        className="fill-slate-700 text-[10px] font-bold"
+                      >
+                        {number(point.totalInternal)}
+                      </text>
+                    )}
+                    {point.totalExternal > 0 && (
+                      <text
+                        x={centerX}
+                        y={zeroY + scaledHeight(point.totalExternal) + 4}
+                        textAnchor="middle"
+                        dominantBaseline="hanging"
+                        className="fill-slate-700 text-[10px] font-bold"
+                      >
+                        {number(point.totalExternal)}
+                      </text>
+                    )}
                     <text
                       x={centerX}
                       y={chartHeight - 25}
