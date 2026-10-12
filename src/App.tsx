@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, LoaderCircle } from 'lucide-react';
 import { AuthModal } from './components/AuthModal';
+import { AuthDialog } from './components/AuthDialog';
 import { FiltersBar } from './components/FiltersBar';
 import { FullTimeEquivalentTrendChart } from './components/FullTimeEquivalentTrendChart';
 import { Header } from './components/Header';
@@ -15,7 +16,23 @@ import { useAppStore } from './store';
 import type { DtddResource, ResourceFilters, SortDirection, SortKey } from './types';
 
 export default function App() {
-  const { token, resources, isLoading, error, loadResources, clearError } = useAppStore();
+  const { restore, isRestoring, importRevision } = useAppStore();
+  useEffect(() => {
+    void restore();
+  }, [restore]);
+  if (isRestoring)
+    return (
+      <main className="grid min-h-screen place-items-center bg-bg">
+        <p role="status">Restauration des données locales…</p>
+      </main>
+    );
+  return <Workspace key={importRevision} />;
+}
+
+function Workspace() {
+  const { token, snapshot, resources, isLoading, error, warning, loadResources, clearError } =
+    useAppStore();
+  const [authOpen, setAuthOpen] = useState(false);
   const [filters, setFilters] = useState<ResourceFilters>({ ...EMPTY_FILTERS });
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -23,9 +40,6 @@ export default function App() {
   const [pageSize, setPageSize] = useState(25);
   const [selected, setSelected] = useState<DtddResource | null>(null);
 
-  useEffect(() => {
-    if (token && resources.length === 0) void loadResources();
-  }, [token, resources.length, loadResources]);
   const filtered = useMemo(
     () =>
       sortResources(
@@ -49,12 +63,29 @@ export default function App() {
     }
   };
   const closeDrawer = useCallback(() => setSelected(null), []);
+  const closeAuth = useCallback(() => setAuthOpen(false), []);
+  const refresh = () => {
+    if (token) void loadResources();
+    else setAuthOpen(true);
+  };
 
-  if (!token) return <AuthModal />;
+  if (!snapshot) return <AuthModal />;
   return (
     <div className="min-h-screen bg-bg text-slate-700">
-      <Header visibleCount={filtered.length} onExport={() => downloadResourcesCsv(filtered)} />
+      <Header
+        visibleCount={filtered.length}
+        onExport={() => downloadResourcesCsv(filtered)}
+        onRefresh={refresh}
+      />
       <main className="mx-auto max-w-screen-2xl space-y-4 p-4 sm:p-6">
+        {warning && (
+          <p
+            role="status"
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
+          >
+            {warning}
+          </p>
+        )}
         {error && (
           <div
             role="alert"
@@ -66,7 +97,8 @@ export default function App() {
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => void loadResources()}
+                onClick={refresh}
+                disabled={isLoading}
                 className="rounded-md bg-red-700 px-3 py-1.5 text-xs font-black text-white"
               >
                 Réessayer
@@ -139,6 +171,7 @@ export default function App() {
         © {new Date().getFullYear()} cKi · Données issues d’Abraxio
       </footer>
       <ResourceDrawer resource={selected} onClose={closeDrawer} />
+      {authOpen && <AuthDialog onClose={closeAuth} />}
     </div>
   );
 }
