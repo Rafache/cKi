@@ -5,6 +5,7 @@ import type {
   ResourceClassification,
   ResourcePeriod,
 } from '../types';
+import { getConsolidatedSchedule } from '../lib/budget';
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 const identifier = (value: unknown): string =>
@@ -97,7 +98,7 @@ export function classifyPeriod(period: ResourcePeriod | null): ResourceClassific
   return 'unknown';
 }
 
-export function getPeriodFinancials(period: ResourcePeriod | null): {
+export function getPeriodFinancials(period: Pick<ResourcePeriod, 'schedule'> | null): {
   dailyRate: number | null;
   totalCost: number | null;
 } {
@@ -117,7 +118,9 @@ export function getPeriodFinancials(period: ResourcePeriod | null): {
   return { dailyRate, totalCost };
 }
 
-export function getPeriodAssignedDays(period: ResourcePeriod | null): number | null {
+export function getPeriodAssignedDays(
+  period: Pick<ResourcePeriod, 'schedule'> | null,
+): number | null {
   if (!period || !period.schedule.some((item) => item.assignedDays !== null)) return null;
   return period.schedule.reduce((total, item) => total + (item.assignedDays ?? 0), 0);
 }
@@ -125,7 +128,8 @@ export function getPeriodAssignedDays(period: ResourcePeriod | null): number | n
 export function mapMember(member: AbraxioMember, now = new Date()): DtddResource {
   const periods = Array.isArray(member.periods) ? member.periods.map(normalizePeriod) : [];
   const primaryPeriod = selectPrimaryPeriod(periods, now);
-  const financials = getPeriodFinancials(primaryPeriod);
+  const consolidated = { schedule: getConsolidatedSchedule({ periods }).map((row) => row.item) };
+  const financials = getPeriodFinancials(consolidated);
   const firstName = text(member.firstName);
   const lastName = text(member.lastName);
   return {
@@ -154,7 +158,7 @@ export function mapMember(member: AbraxioMember, now = new Date()): DtddResource
     periods,
     primaryPeriod,
     classification: classifyPeriod(primaryPeriod),
-    assignedDays: getPeriodAssignedDays(primaryPeriod),
+    assignedDays: getPeriodAssignedDays(consolidated),
     ...financials,
     source: member,
   };

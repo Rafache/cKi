@@ -1,4 +1,5 @@
 import type { DtddResource } from '../types';
+import { getResourceStartDate } from './resources';
 
 const classificationLabels = {
   internal: 'Interne',
@@ -36,7 +37,7 @@ export function resourcesToCsv(resources: DtddResource[]): string {
     classificationLabels[resource.classification],
     resource.primaryPeriod?.skill ?? '',
     resource.primaryPeriod?.supplier ?? '',
-    resource.primaryPeriod?.start ?? '',
+    getResourceStartDate(resource) ?? '',
     resource.primaryPeriod?.end ?? '',
     resource.assignedDays ?? '',
     resource.dailyRate ?? '',

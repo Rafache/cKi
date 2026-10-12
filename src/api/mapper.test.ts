@@ -6,7 +6,8 @@ import {
   normalizePeriod,
   selectPrimaryPeriod,
 } from './mapper';
-import { member } from '../test/fixtures';
+import { historicalMember, member } from '../test/fixtures';
+import { getConsolidatedSchedule, summarizeRows } from '../lib/budget';
 
 const now = new Date('2026-09-02T12:00:00Z');
 
@@ -26,6 +27,61 @@ describe('mapDtddResources', () => {
     expect(result.name).toBe('Sans nom');
     expect(result.classification).toBe('unknown');
     expect(result.periods).toEqual([]);
+    expect(result.assignedDays).toBeNull();
+    expect(result.dailyRate).toBeNull();
+    expect(result.totalCost).toBeNull();
+  });
+});
+
+describe('resource history totals', () => {
+  it('consolidates every period while keeping the current classification', () => {
+    const mapped = mapMember(historicalMember(), now);
+    const summary = summarizeRows(getConsolidatedSchedule(mapped), 2024);
+
+    expect(mapped.primaryPeriod?.id).toBe('20');
+    expect(mapped.classification).toBe('external');
+    expect(mapped.assignedDays).toBe(22.5);
+    expect(mapped.totalCost).toBe(9900);
+    expect(mapped.dailyRate).toBeCloseTo(9900 / 20.5);
+    expect(mapped.assignedDays).toBe(summary.assignedDays);
+    expect(mapped.totalCost).toBe(summary.totalCost);
+    expect(mapped.dailyRate).toBe(summary.averageDailyRate);
+  });
+
+  it('uses the newest period for duplicate months regardless of API ordering', () => {
+    const source = historicalMember();
+    source.periods![1].capacity!.schedule!.items!.push({
+      year: 2026,
+      month: 7,
+      assigned: { days: 99 },
+      price: { net: 400 },
+    });
+
+    for (const periods of [source.periods, [...source.periods!].reverse()]) {
+      const mapped = mapMember({ ...source, periods }, now);
+      expect(mapped.assignedDays).toBe(22.5);
+      expect(mapped.totalCost).toBe(9900);
+    }
+  });
+
+  it('preserves zero days and missing prices across periods', () => {
+    const mapped = mapMember(
+      member({
+        periods: [
+          { start: '2024-01-01' },
+          {
+            start: '2026-01-01',
+            capacity: {
+              schedule: { items: [{ year: 2026, month: 9, assigned: { days: 0 } }] },
+            },
+          },
+        ],
+      }),
+      now,
+    );
+    expect(mapped.assignedDays).toBe(0);
+    expect(mapped.dailyRate).toBeNull();
+    expect(mapped.totalCost).toBeNull();
   });
 });
 
