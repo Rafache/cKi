@@ -21,7 +21,9 @@ export function formatBudgetYear(startYear: number): string {
   return `${startYear}–${startYear + 1}`;
 }
 
-export function getConsolidatedSchedule(resource: DtddResource): ConsolidatedScheduleRow[] {
+export function getConsolidatedSchedule(
+  resource: Pick<DtddResource, 'periods'>,
+): ConsolidatedScheduleRow[] {
   const rowsByMonth = new Map<string, ConsolidatedScheduleRow>();
   const orderedPeriods = [...resource.periods].sort(
     (a, b) => periodTimestamp(a) - periodTimestamp(b),

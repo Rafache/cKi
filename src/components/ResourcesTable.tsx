@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import { summarizeResources } from '../lib/resources';
+import { getResourceStartDate, summarizeResources } from '../lib/resources';
 import type { DtddResource, SortDirection, SortKey } from '../types';
 import { ClassificationBadge } from './ClassificationBadge';
 
@@ -231,7 +231,7 @@ export function ResourcesTable(props: TableProps) {
                 </td>
                 <td>{display(resource.primaryPeriod?.skill)}</td>
                 <td>{display(resource.primaryPeriod?.supplier)}</td>
-                <td className="whitespace-nowrap">{formatDate(resource.primaryPeriod?.start)}</td>
+                <td className="whitespace-nowrap">{formatDate(getResourceStartDate(resource))}</td>
                 <td className="whitespace-nowrap">{formatDate(resource.primaryPeriod?.end)}</td>
                 <td
                   className="text-right font-semibold"

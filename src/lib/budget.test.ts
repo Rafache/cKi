@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mapMember } from '../api/mapper';
-import { member } from '../test/fixtures';
+import { historicalMember, member } from '../test/fixtures';
 import {
   formatBudgetYear,
   formatQuarter,
@@ -13,6 +13,22 @@ import {
 } from './budget';
 
 describe('années budgétaires', () => {
+  it('keeps year and quarter filters scoped while the default view includes every period', () => {
+    const resource = mapMember(historicalMember(), new Date('2026-09-02T12:00:00Z'));
+    expect(scopeResourcesToBudgetYear([resource], null)[0].assignedDays).toBe(22.5);
+    expect(scopeResourcesToQuarter([resource], null)[0].assignedDays).toBe(22.5);
+
+    const [year] = scopeResourcesToBudgetYear([resource], 2024);
+    expect(year.assignedDays).toBe(14);
+    expect(year.totalCost).toBe(4800);
+    expect(year.dailyRate).toBe(400);
+
+    const [quarter] = scopeResourcesToQuarter([resource], '2026-Q3');
+    expect(quarter.assignedDays).toBe(8.5);
+    expect(quarter.totalCost).toBe(5100);
+    expect(quarter.dailyRate).toBe(600);
+  });
+
   it('affecte juillet à juin à la même année budgétaire', () => {
     expect(getBudgetYearStart(2025, 7)).toBe(2025);
     expect(getBudgetYearStart(2026, 6)).toBe(2025);

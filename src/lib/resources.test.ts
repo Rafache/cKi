@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { mapMember } from '../api/mapper';
-import { member } from '../test/fixtures';
+import { historicalMember, member } from '../test/fixtures';
 import {
   EMPTY_FILTERS,
   filterResources,
   getFullTimeEquivalent,
   getFullTimeEquivalentPeriodMultiplier,
+  getResourceStartDate,
   groupResources,
   sortGroupedResources,
   sortResources,
@@ -27,6 +28,29 @@ const resources = [
     }),
   ),
 ];
+
+describe('getResourceStartDate', () => {
+  it('finds the earliest known period independently of the reference period and API ordering', () => {
+    const resource = mapMember(historicalMember(), new Date('2026-09-02T12:00:00Z'));
+    expect(resource.primaryPeriod?.start).toBe('2026-07-01');
+    expect(getResourceStartDate(resource)).toBe('2024-08-01');
+    expect(getResourceStartDate({ ...resource, periods: [...resource.periods].reverse() })).toBe(
+      '2024-08-01',
+    );
+  });
+
+  it('ignores missing and invalid dates and returns null when no start date is known', () => {
+    expect(
+      getResourceStartDate(
+        mapMember(member({ periods: [{}, { start: 'invalid' }, { start: '2025-01-01' }] })),
+      ),
+    ).toBe('2025-01-01');
+    expect(getResourceStartDate(mapMember(member({ periods: [{}, { start: 'invalid' }] })))).toBe(
+      null,
+    );
+    expect(getResourceStartDate(mapMember(member({ periods: [] })))).toBeNull();
+  });
+});
 
 describe('filterResources', () => {
   it('recherche sans tenir compte des accents et filtre plusieurs dimensions', () => {
@@ -71,6 +95,13 @@ describe('filterResources', () => {
 });
 
 describe('sortResources', () => {
+  it('sorts by the first known period instead of the reference period', () => {
+    const historical = mapMember(historicalMember(), new Date('2026-09-02T12:00:00Z'));
+    const newer = mapMember(member({ periods: [{ start: '2025-01-01' }] }));
+    expect(sortResources([newer, historical], 'periodStart', 'asc')).toEqual([historical, newer]);
+    expect(sortResources([historical, newer], 'periodStart', 'desc')).toEqual([newer, historical]);
+  });
+
   it('trie en français dans les deux directions', () => {
     expect(sortResources(resources, 'name', 'asc').map((item) => item.name)).toEqual([
       'Bruno Beta',

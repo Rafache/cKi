@@ -19,6 +19,15 @@ const normalized = (value: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase('fr');
 
+export function getResourceStartDate(resource: DtddResource): string | null {
+  return resource.periods.reduce<string | null>((earliest, period) => {
+    if (!period.start || Number.isNaN(Date.parse(period.start))) return earliest;
+    return earliest === null || Date.parse(period.start) < Date.parse(earliest)
+      ? period.start
+      : earliest;
+  }, null);
+}
+
 export function filterResources(
   resources: DtddResource[],
   filters: ResourceFilters,
@@ -64,7 +73,7 @@ function sortValue(resource: DtddResource, key: SortKey): string | number {
     case 'supplier':
       return resource.primaryPeriod?.supplier ?? '';
     case 'periodStart':
-      return resource.primaryPeriod?.start ?? '';
+      return getResourceStartDate(resource) ?? '';
     case 'periodEnd':
       return resource.primaryPeriod?.end ?? '9999-12-31';
     case 'assignedDays':
