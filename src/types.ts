@@ -66,6 +66,7 @@ export interface AbraxioMember {
 
 export interface AbraxioMembersResponse {
   value: AbraxioMember[];
+  [key: string]: unknown;
 }
 
 export interface CapacityScheduleItem {
