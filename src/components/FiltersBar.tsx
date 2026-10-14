@@ -109,6 +109,7 @@ export function FiltersBar({ resources, filters, onChange }: FiltersBarProps) {
     filters.states.length ||
     filters.teams.length ||
     filters.skills.length ||
+    filters.jobTitles.length ||
     filters.suppliers.length ||
     filters.budgetYear !== null ||
     filters.quarter !== null ||
@@ -159,6 +160,12 @@ export function FiltersBar({ resources, filters, onChange }: FiltersBarProps) {
           values={filters.skills}
           options={uniqueOptions(resources, (resource) => resource.primaryPeriod?.skill ?? '')}
           onChange={(skills) => onChange({ ...filters, skills })}
+        />
+        <MultiSelectFilter
+          label="Poste"
+          values={filters.jobTitles}
+          options={uniqueOptions(resources, (resource) => resource.jobTitle)}
+          onChange={(jobTitles) => onChange({ ...filters, jobTitles })}
         />
         <MultiSelectFilter
           label="Fournisseur"

@@ -159,6 +159,7 @@ export interface ResourceFilters {
   states: string[];
   teams: string[];
   skills: string[];
+  jobTitles: string[];
   suppliers: string[];
   budgetYear: number | null;
   quarter: string | null;

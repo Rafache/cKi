@@ -7,6 +7,7 @@ export const EMPTY_FILTERS: ResourceFilters = {
   states: [],
   teams: [],
   skills: [],
+  jobTitles: [],
   suppliers: [],
   budgetYear: null,
   quarter: null,
@@ -51,6 +52,7 @@ export function filterResources(
     if (filters.teams.length && !filters.teams.includes(resource.team)) return false;
     if (filters.skills.length && !filters.skills.includes(resource.primaryPeriod?.skill ?? ''))
       return false;
+    if (filters.jobTitles.length && !filters.jobTitles.includes(resource.jobTitle)) return false;
     if (
       filters.suppliers.length &&
       !filters.suppliers.includes(resource.primaryPeriod?.supplier ?? '')
