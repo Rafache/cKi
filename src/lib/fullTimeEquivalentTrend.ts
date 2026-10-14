@@ -4,6 +4,7 @@ import {
   getBudgetYearStart,
   getConsolidatedSchedule,
   getQuarterKey,
+  summarizeRows,
 } from './budget';
 import { getFullTimeEquivalent } from './resources';
 import type {
@@ -194,6 +195,7 @@ export function buildMonthlyFullTimeEquivalentTrend(
     groupLabel: string;
     classification: ResourceClassification;
     assignedDays: number;
+    totalCost: number;
   }
 
   const aggregated = new Map<string, AggregatedEntry>();
@@ -207,18 +209,30 @@ export function buildMonthlyFullTimeEquivalentTrend(
       groupLabel,
       classification,
       assignedDays: 0,
+      totalCost: 0,
     };
-    entry.assignedDays += row.item.assignedDays ?? 0;
+    const summary = summarizeRows([row], row.year);
+    entry.assignedDays += summary.assignedDays;
+    entry.totalCost += summary.totalCost;
     aggregated.set(aggKey, entry);
   }
 
   const contributions: ScheduleContribution[] = [...aggregated.values()].map((entry) => {
-    const value =
-      metric === 'headcount'
-        ? entry.assignedDays > 0
-          ? 1
-          : 0
-        : getFullTimeEquivalent(entry.assignedDays, entry.classification, periodMultiplier);
+    let value: number;
+    switch (metric) {
+      case 'headcount':
+        value = entry.assignedDays > 0 ? 1 : 0;
+        break;
+      case 'days':
+        value = entry.assignedDays;
+        break;
+      case 'cost':
+        value = entry.totalCost;
+        break;
+      case 'fte':
+        value = getFullTimeEquivalent(entry.assignedDays, entry.classification, periodMultiplier);
+        break;
+    }
     return {
       key: entry.periodKey,
       groupLabel: entry.groupLabel,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mapMember } from '../api/mapper';
 import { member } from '../test/fixtures';
+import { summarizeRows, getConsolidatedSchedule } from './budget';
 import { buildMonthlyFullTimeEquivalentTrend } from './fullTimeEquivalentTrend';
 
 const internal = mapMember(
@@ -43,6 +44,145 @@ const external = mapMember(
 );
 
 describe('buildMonthlyFullTimeEquivalentTrend', () => {
+  const pricedResources = [
+    mapMember(
+      member({
+        id: 10,
+        jobTitle: 'Engineer',
+        periods: [
+          {
+            start: '2025-01-01',
+            type: { label: 'Interne' },
+            capacity: {
+              schedule: {
+                items: [{ year: 2026, month: 4, assigned: { days: 99 }, price: { net: 900 } }],
+              },
+            },
+          },
+          {
+            start: '2026-01-01',
+            type: { label: 'Interne' },
+            capacity: {
+              schedule: {
+                items: [
+                  { year: 2026, month: 4, assigned: { days: 2.5 }, price: { net: 100 } },
+                  { year: 2026, month: 5, assigned: { days: 3 }, price: { net: 200 } },
+                  { year: 2026, month: 6, assigned: { days: 1 } },
+                  { year: 2026, month: 7, assigned: { days: 8 }, price: { net: 300 } },
+                ],
+              },
+            },
+          },
+        ],
+      }),
+    ),
+    mapMember(
+      member({
+        id: 11,
+        jobTitle: 'Engineer',
+        periods: [
+          {
+            start: '2026-01-01',
+            type: { label: 'Prestataire externe' },
+            capacity: {
+              schedule: {
+                items: [
+                  { year: 2026, month: 4, assigned: { days: 4 }, price: { net: 50 } },
+                  { year: 2026, month: 5, assigned: { days: 2 } },
+                ],
+              },
+            },
+          },
+        ],
+      }),
+    ),
+  ];
+
+  it.each(['month', 'quarter', 'year'] as const)(
+    'sums days and costs per %s without averaging or counting overlapping schedules twice',
+    (granularity) => {
+      for (const metric of ['days', 'cost'] as const) {
+        const trend = buildMonthlyFullTimeEquivalentTrend(
+          pricedResources,
+          null,
+          '2026-Q2',
+          'jobTitle',
+          metric,
+          granularity,
+        );
+
+        expect(trend.seriesLabels).toEqual(['Engineer']);
+        expect(trend.points.reduce((sum, point) => sum + point.totalInternal, 0)).toBe(
+          metric === 'days' ? 6.5 : 1050,
+        );
+        expect(trend.points.reduce((sum, point) => sum + point.totalExternal, 0)).toBe(
+          metric === 'days' ? 6 : 300,
+        );
+        if (granularity === 'month') {
+          expect(trend.points[0].segments).toEqual([
+            {
+              label: 'Engineer',
+              internal: metric === 'days' ? 2.5 : 250,
+              external: metric === 'days' ? 4 : 200,
+            },
+          ]);
+        }
+      }
+    },
+  );
+
+  it('matches budget totals and applies the July boundary for days and costs', () => {
+    const summary = summarizeRows(pricedResources.flatMap(getConsolidatedSchedule), 2026);
+    for (const metric of ['days', 'cost'] as const) {
+      const fullTrend = buildMonthlyFullTimeEquivalentTrend(
+        pricedResources,
+        null,
+        null,
+        '',
+        metric,
+      );
+      expect(
+        fullTrend.points.reduce((sum, point) => sum + point.totalInternal + point.totalExternal, 0),
+      ).toBe(metric === 'days' ? summary.assignedDays : summary.totalCost);
+      const budgetTrend = buildMonthlyFullTimeEquivalentTrend(
+        pricedResources,
+        2026,
+        null,
+        '',
+        metric,
+        'year',
+      );
+      expect(budgetTrend.points).toHaveLength(1);
+      expect(budgetTrend.points[0].key).toBe('2026');
+      expect(budgetTrend.points[0].totalInternal).toBe(metric === 'days' ? 8 : 2400);
+      expect(budgetTrend.points[0].totalExternal).toBe(0);
+    }
+  });
+
+  it('keeps unpriced days visible and treats missing days or prices as zero cost', () => {
+    const resource = mapMember(
+      member({
+        periods: [
+          {
+            type: { label: 'Interne' },
+            capacity: {
+              schedule: {
+                items: [
+                  { year: 2026, month: 4, assigned: { days: 3 } },
+                  { year: 2026, month: 5, price: { net: 100 } },
+                ],
+              },
+            },
+          },
+        ],
+      }),
+    );
+    const days = buildMonthlyFullTimeEquivalentTrend([resource], null, '2026-Q2', '', 'days');
+    const cost = buildMonthlyFullTimeEquivalentTrend([resource], null, '2026-Q2', '', 'cost');
+    expect(days.points.map((point) => point.totalInternal)).toEqual([3, 0, 0]);
+    expect(cost.points.map((point) => point.totalInternal)).toEqual([0, 0, 0]);
+  });
+
   it.each(['fte', 'headcount'] as const)(
     'groups %s by job title across classifications and includes missing titles',
     (metric) => {

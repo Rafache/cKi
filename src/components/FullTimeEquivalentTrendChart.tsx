@@ -23,10 +23,34 @@ const EXTERNAL_COLOR = '#7c3aed';
 const number = (value: number) =>
   new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value);
 
+const currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+const compactCurrency = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  notation: 'compact',
+  maximumFractionDigits: 2,
+});
+
+const metricLabels: Record<TrendMetric, string> = {
+  fte: 'des ETP',
+  headcount: 'du nombre de personnes',
+  days: 'des jours affectés',
+  cost: 'des coûts HT',
+};
+
+const emptyMessages: Record<TrendMetric, string> = {
+  fte: 'Aucune donnée ETP pour les filtres actifs.',
+  headcount: 'Aucune personne pour les filtres actifs.',
+  days: 'Aucun jour affecté pour les filtres actifs.',
+  cost: 'Aucun coût HT pour les filtres actifs.',
+};
+
 function formatMetricValue(value: number, metric: TrendMetric): string {
   if (metric === 'headcount') {
     return `${number(value)} ${value > 1 ? 'personnes' : 'personne'}`;
   }
+  if (metric === 'days') return `${number(value)} ${value > 1 ? 'jours' : 'jour'}`;
+  if (metric === 'cost') return `${currency.format(value)} HT`;
   return `${number(value)} ETP`;
 }
 
@@ -43,8 +67,7 @@ function getPeriodNoun(granularity: TrendGranularity): string {
 }
 
 function getTrendChartTitle(metric: TrendMetric, granularity: TrendGranularity): string {
-  const metricLabel = metric === 'headcount' ? 'du nombre de personnes' : 'des ETP';
-  return `Évolution ${getPeriodAdjective(granularity)} ${metricLabel}`;
+  return `Évolution ${getPeriodAdjective(granularity)} ${metricLabels[metric]}`;
 }
 
 const groupLabels: Record<Exclude<GroupByKey, ''>, string> = {
@@ -117,9 +140,15 @@ export function FullTimeEquivalentTrendChart({
     ]),
   );
 
-  const chartWidth = Math.max(760, trend.points.length * 64 + 76, containerWidth);
+  const formatChartValue = (value: number) =>
+    metric === 'cost' ? compactCurrency.format(value) : number(value);
+  const left = metric === 'cost' ? 84 : 54;
+  const chartWidth = Math.max(
+    760,
+    trend.points.length * (metric === 'cost' ? 96 : 64) + left + 22,
+    containerWidth,
+  );
   const chartHeight = 380;
-  const left = 54;
   const right = 18;
   const top = 24;
   const bottom = 48;
@@ -186,36 +215,17 @@ export function FullTimeEquivalentTrendChart({
               Année
             </button>
           </div>
-          <div
-            className="inline-flex rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 text-xs font-semibold"
-            role="group"
+          <select
             aria-label="Métrique de l’évolution"
+            value={metric}
+            onChange={(event) => setMetric(event.target.value as TrendMetric)}
+            className="max-w-full rounded-lg border border-slate-200 bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-brand outline-none focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-accent/15"
           >
-            <button
-              type="button"
-              onClick={() => setMetric('fte')}
-              aria-pressed={metric === 'fte'}
-              className={`rounded-md px-2.5 py-1 transition ${
-                metric === 'fte'
-                  ? 'bg-white font-bold text-brand shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              ETP
-            </button>
-            <button
-              type="button"
-              onClick={() => setMetric('headcount')}
-              aria-pressed={metric === 'headcount'}
-              className={`rounded-md px-2.5 py-1 transition ${
-                metric === 'headcount'
-                  ? 'bg-white font-bold text-brand shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Nombre de personnes
-            </button>
-          </div>
+            <option value="fte">ETP</option>
+            <option value="headcount">Nombre de personnes</option>
+            <option value="days">Jours</option>
+            <option value="cost">Coût HT</option>
+          </select>
         </div>
       </div>
       {hasValues ? (
@@ -224,22 +234,16 @@ export function FullTimeEquivalentTrendChart({
             ref={chartContainerRef}
             className="overflow-x-auto"
             role="region"
-            aria-label={`Graphique ${metric === 'headcount' ? 'du nombre de personnes' : 'des ETP'} ${granularity === 'quarter' ? 'trimestriel' : granularity === 'year' ? 'annuel' : 'mensuel'}, défilement horizontal`}
+            aria-label={`Graphique ${metricLabels[metric]} ${granularity === 'quarter' ? 'trimestriel' : granularity === 'year' ? 'annuel' : 'mensuel'}, défilement horizontal`}
           >
             <svg
               width={chartWidth}
               height={chartHeight}
               role="img"
-              aria-label={
-                metric === 'headcount'
-                  ? `Personnes internes positives et personnes externes négatives par ${getPeriodNoun(granularity)}`
-                  : `ETP internes positifs et ETP externes négatifs par ${getPeriodNoun(granularity)}`
-              }
+              aria-label={`Évolution ${metricLabels[metric]} des internes et externes par ${getPeriodNoun(granularity)}`}
               className="block"
             >
-              <title>
-                {`Évolution ${getPeriodAdjective(granularity)} ${metric === 'headcount' ? 'du nombre de personnes internes et externes' : 'des ETP internes et externes'}`}
-              </title>
+              <title>{`${getTrendChartTitle(metric, granularity)} des internes et externes`}</title>
               <desc>
                 {metric === 'headcount'
                   ? 'Les barres internes représentent le nombre de personnes au-dessus de l’axe zéro et les barres externes en dessous. Les valeurs sont empilées lorsque le regroupement est actif.'
@@ -263,7 +267,7 @@ export function FullTimeEquivalentTrendChart({
                       textAnchor="end"
                       className="fill-slate-500 text-[10px] font-semibold"
                     >
-                      {number(tick)}
+                      {formatChartValue(tick)}
                     </text>
                   </g>
                 );
@@ -330,7 +334,7 @@ export function FullTimeEquivalentTrendChart({
                         textAnchor="middle"
                         className="fill-slate-700 text-[10px] font-bold"
                       >
-                        {number(point.totalInternal)}
+                        {formatChartValue(point.totalInternal)}
                       </text>
                     )}
                     {point.totalExternal > 0 && (
@@ -341,7 +345,7 @@ export function FullTimeEquivalentTrendChart({
                         dominantBaseline="hanging"
                         className="fill-slate-700 text-[10px] font-bold"
                       >
-                        {number(point.totalExternal)}
+                        {formatChartValue(point.totalExternal)}
                       </text>
                     )}
                     <text
@@ -381,11 +385,7 @@ export function FullTimeEquivalentTrendChart({
           </div>
         </>
       ) : (
-        <p className="p-6 text-sm text-slate-500">
-          {metric === 'headcount'
-            ? 'Aucune personne pour les filtres actifs.'
-            : 'Aucune donnée ETP pour les filtres actifs.'}
-        </p>
+        <p className="p-6 text-sm text-slate-500">{emptyMessages[metric]}</p>
       )}
     </section>
   );
