@@ -188,13 +188,14 @@ export function FiltersBar({ resources, filters, onChange }: FiltersBarProps) {
           label="Grouper par"
           emptyLabel="Aucun regroupement"
           value={filters.groupBy}
-          options={['classification', 'state', 'team', 'skill', 'supplier']}
+          options={['classification', 'state', 'team', 'skill', 'jobTitle', 'supplier']}
           formatOption={(option) =>
             ({
               classification: 'Type',
               state: 'État',
               team: 'Équipe',
               skill: 'Compétence',
+              jobTitle: 'Poste',
               supplier: 'Fournisseur',
             })[option] ?? option
           }

@@ -43,6 +43,33 @@ const external = mapMember(
 );
 
 describe('buildMonthlyFullTimeEquivalentTrend', () => {
+  it.each(['fte', 'headcount'] as const)(
+    'groups %s by job title across classifications and includes missing titles',
+    (metric) => {
+      const resources = [
+        { ...internal, jobTitle: 'Data engineer' },
+        { ...external, jobTitle: 'Data engineer' },
+        { ...internal, id: '3', jobTitle: '' },
+      ];
+      const trend = buildMonthlyFullTimeEquivalentTrend(
+        resources,
+        null,
+        '2026-Q2',
+        'jobTitle',
+        metric,
+      );
+      const april = trend.points[0];
+
+      expect(trend.seriesLabels).toEqual(['Data engineer', 'Non renseigné']);
+      expect(april.segments[0].internal).toBeCloseTo(1);
+      expect(april.segments[0].external).toBeCloseTo(1);
+      expect(april.segments[1].internal).toBeCloseTo(1);
+      expect(april.segments[1].external).toBe(0);
+      expect(april.totalInternal).toBeCloseTo(2);
+      expect(april.totalExternal).toBeCloseTo(1);
+    },
+  );
+
   it('place les ETP internes et externes dans leurs séries mensuelles', () => {
     const trend = buildMonthlyFullTimeEquivalentTrend([internal, external], null, '2026-Q2', '');
 

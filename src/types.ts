@@ -165,7 +165,8 @@ export interface ResourceFilters {
   groupBy: GroupByKey;
 }
 
-export type GroupByKey = '' | 'classification' | 'state' | 'team' | 'skill' | 'supplier';
+export type GroupByKey =
+  '' | 'classification' | 'state' | 'team' | 'skill' | 'jobTitle' | 'supplier';
 
 export type SortKey =
   | 'name'

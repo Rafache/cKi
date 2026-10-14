@@ -114,6 +114,8 @@ function getContributionGroupLabel(
       return resource.team || 'Non renseignée';
     case 'skill':
       return row.period.skill || 'Non renseigné';
+    case 'jobTitle':
+      return resource.jobTitle || 'Non renseigné';
     case 'supplier':
       return row.period.supplier || 'Non renseigné';
     default:

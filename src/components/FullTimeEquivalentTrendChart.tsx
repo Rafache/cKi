@@ -52,6 +52,7 @@ const groupLabels: Record<Exclude<GroupByKey, ''>, string> = {
   state: 'état',
   team: 'équipe',
   skill: 'compétence',
+  jobTitle: 'poste',
   supplier: 'fournisseur',
 };
 
